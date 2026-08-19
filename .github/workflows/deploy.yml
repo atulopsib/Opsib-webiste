@@ -1,0 +1,45 @@
+name: Deploy to Google Cloud Storage
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to GCP
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for Workload Identity Federation
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Setup Google Cloud Authentication
+      # Note: You need to set GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT in your GitHub repository secrets.
+      # Alternatively, you can use GCP_CREDENTIALS for a Service Account JSON key.
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # Prefer Workload Identity Federation
+          # workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
+          # service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
+          
+          # Use this if you are passing a JSON Service Account key instead
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      # Upload files to the Cloud Storage Bucket
+      # Ensure you set the GCP_BUCKET_NAME secret in your GitHub repository.
+      - id: 'upload-folder'
+        name: 'Upload to Cloud Storage'
+        uses: 'google-github-actions/upload-cloud-storage@v2'
+        with:
+          path: './'
+          # Ignore .git and .github directories
+          glob: '!**/.git/**, !**/.github/**'
+          destination: '${{ secrets.GCP_BUCKET_NAME }}'
+          parent: false
