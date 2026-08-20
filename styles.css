@@ -1410,3 +1410,48 @@ body {
   .cp-body { padding: 28px 20px 40px; }
   .cp-header { padding: 16px 20px; }
 }
+
+/* ══════════════════════════════════════════════
+   NEW DEMO CTA BUTTON
+══════════════════════════════════════════════ */
+.cta-demo-new {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: #dfdfdf;
+  color: #1a1a1a;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Jost', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.cta-demo-new:hover {
+  background-color: #d0d0d0;
+  transform: translateY(-2px);
+}
+
+.cta-demo-new-text {
+  letter-spacing: -0.01em;
+}
+
+.cta-demo-new-arrow {
+  display: flex;
+  align-items: center;
+  color: #1a1a1a;
+}
+
+@media (max-width: 768px) {
+  .cta-demo-new {
+    font-size: 20px;
+    padding: 14px 20px;
+    border-radius: 4px;
+  }
+}
