@@ -731,6 +731,55 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════
+   PRE-FOOTER CTA SECTION
+════════════════════════════════════════════════════════ */
+.demo-cta-section {
+  background: var(--color-light-surface);
+  padding: 24px var(--px) var(--section-pad-md);
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.demo-cta-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.demo-cta-headline {
+  font-family: var(--font-ui);
+  font-size: clamp(20px, 2.5vw, 32px);
+  font-weight: 500;
+  color: var(--color-light-text);
+  margin: 0;
+}
+
+.cta-demo-button {
+  background: #e5e5e5;
+  color: #000000;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 14px 40px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--dur-mid) ease, transform var(--dur-mid) ease;
+}
+
+.cta-demo-button:hover {
+  background: #d0d0d0;
+  transform: translateY(-2px);
+}
+
+/* ════════════════════════════════════════════════════════
    ⑤ FOOTER
    position:relative + z-index:1 → scrolls OVER fixed hero
 ════════════════════════════════════════════════════════ */

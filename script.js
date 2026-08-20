@@ -152,8 +152,10 @@
   }
 
   const footerContactBtn = document.getElementById('footer-contact');
+  const demoContactBtn   = document.getElementById('demo-contact-btn');
   if (openBtn)  openBtn.addEventListener('click', openPanel);
   if (footerContactBtn) footerContactBtn.addEventListener('click', openPanel);
+  if (demoContactBtn) demoContactBtn.addEventListener('click', openPanel);
   if (closeBtn) closeBtn.addEventListener('click', closePanel);
   if (overlay)  overlay.addEventListener('click', closePanel);
 

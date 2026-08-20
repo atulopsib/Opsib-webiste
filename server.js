@@ -1,7 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const db = require('./db');
+const db = require('./firebase');
 const mailer = require('./mailer');
 
 const app = express();
