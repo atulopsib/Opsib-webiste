@@ -100,3 +100,12 @@ app.listen(PORT, () => {
   console.log(`  Leads API    : http://localhost:${PORT}/api/leads`);
   console.log(`=================================================`);
 });
+
+// Global Error Handling
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection:', reason);
+});
