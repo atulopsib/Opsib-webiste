@@ -71,7 +71,7 @@ app.post('/api/contact', async (req, res) => {
     console.error('[API ERROR] /api/contact:', error);
     return res.status(500).json({
       success: false,
-      error: 'An internal server error occurred while processing your request. Please try again.'
+      error: 'Internal Server Error: ' + (error.message || error.toString())
     });
   }
 });
