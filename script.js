@@ -230,6 +230,21 @@
             statusBox.textContent = result.message || 'Thank you! Your request has been submitted.';
             statusBox.hidden = false;
           }
+          
+          // Track conversion in PostHog
+          if (window.posthog) {
+            posthog.capture('demo_requested', {
+              company: formData.company,
+              jobtitle: formData.jobtitle
+            });
+            // Identify the user with their email so their session is linked to their identity
+            posthog.identify(formData.email, {
+              email: formData.email,
+              name: formData.firstname + ' ' + formData.lastname,
+              company: formData.company
+            });
+          }
+
           form.reset();
         } else {
           if (statusBox) {
