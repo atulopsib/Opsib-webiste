@@ -13,8 +13,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static frontend files
-app.use(express.static(__dirname));
+// Serve static frontend files.
+// HTML is revalidated every request so deploys are picked up
+// immediately; fingerprint-free assets get a short cache with
+// revalidation, images a long one.
+app.use(express.static(__dirname, {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (/\.html$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else if (/\.(css|js)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+    } else if (/\.(png|jpe?g|webp|svg|ico|mp4|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000');
+    }
+  }
+}));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

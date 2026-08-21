@@ -7,9 +7,9 @@
   <title>Opsib — Sovereign AI for Retail Operations</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
-  <link rel="icon" type="image/png" href="favicon.png" />
-  <link rel="apple-touch-icon" href="favicon.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <link rel="stylesheet" href="styles.css" />
   
   <!-- PostHog Analytics -->
@@ -30,10 +30,10 @@
 <header class="hero-nav-wrapper" role="banner">
   <nav class="hero-nav" id="main-nav" aria-label="Main navigation">
     <a class="nav-logo" href="/" aria-label="Opsib Home">
-      <img src="logo.png" alt="Opsib" class="nav-logo-img" />
+      <img src="logo.png" alt="Opsib" class="nav-logo-img" width="640" height="351" decoding="async" />
     </a>
-    <button class="nav-cta" id="nav-contact" aria-haspopup="dialog" aria-controls="contact-panel">
-      Get Started <span aria-hidden="true">↗</span>
+    <button class="btn btn--glass" id="nav-contact" aria-haspopup="dialog" aria-controls="contact-panel">
+      Get Started <span class="btn__icon" aria-hidden="true">↗</span>
     </button>
   </nav>
 </header>
@@ -45,7 +45,7 @@
 
   <!-- LAYER 0 · VIDEO BACKGROUND -->
   <div class="hero-bg">
-    <video class="hero-video" autoplay muted loop playsinline>
+    <video class="hero-video" autoplay muted loop playsinline preload="metadata">
       <source src="https://res.cloudinary.com/tb5i5niz/video/upload/v1787221710/obsib_hero_video.mp4" type="video/mp4" />
     </video>
     <div class="hero-overlay"></div>
@@ -89,8 +89,8 @@
     </h1>
 
     <div class="hero-cta-row" id="hero-cta-row">
-      <a class="cta-primary" href="explore-platform.html" id="hero-cta-primary">
-        See How It Works <span aria-hidden="true">↗</span>
+      <a class="btn btn--outline-inverse" href="explore-platform.html" id="hero-cta-primary">
+        See How It Works <span class="btn__icon" aria-hidden="true">↗</span>
       </a>
     </div>
   </div>
@@ -118,7 +118,7 @@
 <section class="retail-section" id="how-it-works">
   <div class="retail-statement-wrap">
     <h2 class="retail-statement">
-      Turn fragmented retail operations data into unified realtime decsion making - helping multistore enterprises detect , anamolies, priortize action, and make smarter decions across every store
+      Turn fragmented retail operations data into unified realtime decision making - helping multistore enterprises detect , anomalies, prioritize action, and make smarter decisions across every store
     </h2>
   </div>
 </section>
@@ -129,8 +129,8 @@
 <section class="how-bridge" id="how-video">
 
   <div class="section-container">
-    <!-- STEP 5: Editorial eyebrow label — frames what the video is -->
-    <p class="how-eyebrow">Product Overview</p>
+    <!-- Editorial eyebrow label — frames what the video is -->
+    <p class="section-eyebrow">Product Overview</p>
 
     <!-- Explanatory Video Container -->
     <div class="how-video-wrap">
@@ -153,7 +153,10 @@
     <div class="mission-image-container">
       <img
         class="mission-image"
-        src="mission.png"
+        src="mission.jpg"
+        width="640"
+        height="360"
+        decoding="async"
         alt="Retail operations intelligence — Opsib in action"
         loading="lazy"
       />
@@ -166,7 +169,7 @@
     <p class="mission-body">
       OPSIB connects complex systems, data, and signals across the retail network to help teams understand what is happening, act on what matters, and improve every day.
     </p>
-    <a class="mission-cta" href="explore-platform.html" id="mission-cta">Learn More</a>
+    <a class="btn btn--outline" href="explore-platform.html" id="mission-cta">Learn More</a>
   </div>
 
 </section>
@@ -176,10 +179,10 @@
 ══════════════════════════════════════════════ -->
 <section class="demo-cta-section" id="request-demo">
   <div class="demo-cta-container">
-    <button class="cta-demo-new js-open-contact" id="demo-contact-btn" aria-haspopup="dialog" aria-controls="contact-panel">
-      <span class="cta-demo-new-text">Request a Demo</span>
-      <span class="cta-demo-new-arrow" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <button class="btn btn--solid btn--lg js-open-contact" id="demo-contact-btn" aria-haspopup="dialog" aria-controls="contact-panel">
+      <span>Request a Demo</span>
+      <span class="btn__icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
@@ -196,7 +199,7 @@
 
     <!-- Brand col -->
     <div class="footer-col footer-col--brand">
-      <img src="logo.png" alt="Opsib" class="footer-logo-img" loading="lazy" />
+      <img src="logo.png" alt="Opsib" class="footer-logo-img" width="640" height="351" loading="lazy" decoding="async" />
       <p class="footer-tagline">Retail Operations Intelligence</p>
     </div>
 
@@ -226,11 +229,14 @@
       </ul>
     </div>
 
-    <!-- Company col (stripped) -->
+    <!-- Company col — the title renders nothing but occupies the
+         title row, so this column aligns to the same grid as its
+         siblings without adding any visible text -->
     <div class="footer-col">
-      <ul class="footer-links" style="margin-top: 26px;">
+      <h3 class="footer-col-title footer-col-title--silent">Company</h3>
+      <ul class="footer-links">
         <li><a href="careers.html" class="footer-link" id="footer-careers">Careers</a></li>
-        <li><a href="javascript:void(0);" class="footer-link" id="footer-contact">Contact Us</a></li>
+        <li><button type="button" class="footer-link footer-link--button" id="footer-contact" aria-haspopup="dialog" aria-controls="contact-panel">Contact Us</button></li>
       </ul>
     </div>
 
@@ -333,7 +339,7 @@
 
       <div class="cp-status" id="cp-status" aria-live="polite" hidden></div>
 
-      <button class="cp-submit" type="submit" id="cp-submit">Submit</button>
+      <button class="btn btn--solid cp-submit" type="submit" id="cp-submit">Submit</button>
 
       <p class="cp-privacy">
         Please see our <a href="#" class="cp-privacy-link">Privacy Policy</a> regarding how we will handle this information.

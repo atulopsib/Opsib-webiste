@@ -1,10 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════
-   ONYX — Interaction Layer
+   OPSIB — Interaction Layer
    · Grid parallax
    · Meta flicker
    · Scroll-reveal (IntersectionObserver)
    · Nav scroll state
-   · Smooth CTA hover lift
+   · Contact panel
+   · Contact form submission
 ═══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -19,6 +20,8 @@
     document.addEventListener('mousemove', (e) => {
       mx = (e.clientX / window.innerWidth  - 0.5);
       my = (e.clientY / window.innerHeight - 0.5);
+      // Transient compositor hint — no permanent will-change layer.
+      grid.classList.add('is-parallax');
       if (!raf) {
         requestAnimationFrame(() => {
           grid.style.transform = `translate(${mx * 9}px, ${my * 9}px)`;
@@ -31,20 +34,37 @@
     document.addEventListener('mouseleave', () => {
       grid.style.transition = 'transform 1.6s cubic-bezier(0.16,1,0.3,1)';
       grid.style.transform  = 'translate(0,0)';
-      setTimeout(() => { grid.style.transition = ''; }, 1600);
+      setTimeout(() => {
+        grid.style.transition = '';
+        grid.classList.remove('is-parallax');
+      }, 1600);
     });
   }
 
   /* ── META TAG FLICKER ──────────────────────────────────────── */
-  document.querySelectorAll('.meta-tag').forEach((tag) => {
-    setInterval(() => {
-      if (Math.random() > 0.80) {
-        const prev = tag.style.opacity || '1';
-        tag.style.opacity = (Math.random() * 0.10 + 0.08).toFixed(2);
-        setTimeout(() => { tag.style.opacity = prev; }, 100 + Math.random() * 280);
-      }
-    }, 2200 + Math.random() * 3800);
-  });
+  // Timer handles are retained so they can be cleared when the hero
+  // scrolls out of view. v2.0 started six intervals and never
+  // stopped them, so they kept firing behind opaque sections.
+  const metaTags = document.querySelectorAll('.meta-tag');
+  let flickerTimers = [];
+
+  function startFlicker() {
+    if (flickerTimers.length) return;
+    metaTags.forEach((tag) => {
+      flickerTimers.push(setInterval(() => {
+        if (Math.random() > 0.80) {
+          const prev = tag.style.opacity || '1';
+          tag.style.opacity = (Math.random() * 0.10 + 0.08).toFixed(2);
+          setTimeout(() => { tag.style.opacity = prev; }, 100 + Math.random() * 280);
+        }
+      }, 2200 + Math.random() * 3800));
+    });
+  }
+
+  function stopFlicker() {
+    flickerTimers.forEach(clearInterval);
+    flickerTimers = [];
+  }
 
   /* ── VIDEO FALLBACK ────────────────────────────────────────── */
   const video = document.querySelector('.hero-video');
@@ -54,32 +74,76 @@
     if (p) p.catch(() => {});
   }
 
-  /* ── HEADLINE LETTER TRACKING ──────────────────────────────── */
-  // Letter-spacing is now controlled by CSS clamp — no JS override needed.
+  /* ── PAUSE OFFSCREEN HERO WORK ─────────────────────────────── */
+  // .hero is position:fixed and never unmounts, so once the page
+  // scrolls past it the video kept decoding and the parallax kept
+  // listening behind opaque content. Suspend all of it while the
+  // hero is out of view and restore on re-entry.
+  const heroSpacer = document.querySelector('.hero-spacer');
+  let heroVisible = true;
 
-  /* ── NAV SCROLL SHADOW ─────────────────────────────────────── */
+  function setHeroActive(active) {
+    if (active === heroVisible) return;
+    heroVisible = active;
+    if (active) {
+      startFlicker();
+      if (video && video.paused) { const q = video.play(); if (q) q.catch(() => {}); }
+    } else {
+      stopFlicker();
+      if (video && !video.paused) video.pause();
+      if (grid) grid.classList.remove('is-parallax');
+    }
+  }
+
+  startFlicker();
+
+  if (heroSpacer) {
+    new IntersectionObserver(
+      (entries) => entries.forEach((e) => setHeroActive(e.isIntersecting)),
+      { threshold: 0 }
+    ).observe(heroSpacer);
+  }
+
+  /* ── NAV SCROLL STATE ──────────────────────────────────────── */
+  // Appearance lives in CSS. The guard means one class toggle per
+  // threshold crossing instead of two inline style writes per tick.
   const nav = document.querySelector('.hero-nav');
   if (nav) {
+    let scrolled = null;
     const onScroll = () => {
-      if (window.scrollY > 60) {
-        nav.style.background = 'rgba(4, 6, 15, 0.90)';
-        nav.style.borderColor = 'rgba(255, 255, 255, 0.20)';
-      } else {
-        nav.style.background = 'rgba(4, 6, 15, 0.65)';
-        nav.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-      }
+      const past = window.scrollY > 60;
+      if (past === scrolled) return;
+      scrolled = past;
+      nav.classList.toggle('is-scrolled', past);
     };
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  /* ── ARTICLE READING PROGRESS ──────────────────────────────── */
+  const progress = document.getElementById('read-progress');
+  if (progress) {
+    let pRaf = false;
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? Math.min(window.scrollY / max, 1) : 0;
+      progress.style.transform = `scaleX(${pct})`;
+      pRaf = false;
+    };
+    window.addEventListener('scroll', () => {
+      if (!pRaf) { requestAnimationFrame(update); pRaf = true; }
+    }, { passive: true });
+    update();
   }
 
 
   /* ── SCROLL-REVEAL (IntersectionObserver) ──────────────────── */
-  // STEP 10: Trigger on section-level containers, not adjacent text siblings.
-  // This prevents the choppy stagger that occurred when eyebrow + headline
-  // each triggered independently as adjacent elements in the same section.
+  // One reveal per content group, never per adjacent sibling. The
+  // product-overview eyebrow and video share a container so they
+  // enter as a single unit instead of animating independently.
   const revealEls = document.querySelectorAll(
     '.retail-statement-wrap, ' +
-    '.how-video-wrap, .how-eyebrow, ' +
+    '.how-bridge .section-container, ' +
     '.mission-card, .mission-image-wrap, ' +
     '.footer-col'
   );
@@ -107,37 +171,31 @@
 
   revealEls.forEach((el) => observer.observe(el));
 
-  /* ── MISSION IMAGE REVEAL ──────────────────────────────────── */
-  const missionImg = document.querySelector('.mission-image');
-  if (missionImg) {
-    const imgObs = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          imgObs.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.1 });
-
-    imgObs.observe(missionImg);
-  }
-
   /* ── CONTACT PANEL ─────────────────────────────────────────── */
   const openBtn   = document.getElementById('nav-contact');
   const panel     = document.getElementById('contact-panel');
   const overlay   = document.getElementById('contact-overlay');
   const closeBtn  = document.getElementById('cp-close');
-  const tabs      = document.querySelectorAll('.cp-tab');
 
-  function openPanel() {
+  // Remember which control opened the panel so focus returns there,
+  // rather than always to the nav button.
+  let lastTrigger = null;
+
+  const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]),' +
+                    ' select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  if (panel) panel.inert = true;
+
+  function openPanel(e) {
+    lastTrigger = (e && e.currentTarget) || openBtn;
+    panel.inert = false;
     panel.classList.add('is-open');
     overlay.classList.add('is-open');
     panel.setAttribute('aria-hidden', 'false');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    // Focus first input after transition
     setTimeout(() => {
-      const first = panel.querySelector('input, select, textarea');
+      const first = panel.querySelector(FOCUSABLE);
       if (first) first.focus();
     }, 520);
   }
@@ -147,8 +205,10 @@
     overlay.classList.remove('is-open');
     panel.setAttribute('aria-hidden', 'true');
     overlay.setAttribute('aria-hidden', 'true');
+    panel.inert = true;
     document.body.style.overflow = '';
-    openBtn && openBtn.focus();
+    if (lastTrigger) lastTrigger.focus();
+    else if (openBtn) openBtn.focus();
   }
 
   const footerContactBtn = document.getElementById('footer-contact');
@@ -159,29 +219,30 @@
   if (closeBtn) closeBtn.addEventListener('click', closePanel);
   if (overlay)  overlay.addEventListener('click', closePanel);
 
-  // Escape key closes
+  // Escape closes; Tab is trapped inside the dialog. aria-modal="true"
+  // was declared in v2.0 but nothing contained focus, so it escaped
+  // to the page behind.
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && panel && panel.classList.contains('is-open')) {
-      closePanel();
+    if (!panel || !panel.classList.contains('is-open')) return;
+
+    if (e.key === 'Escape') { closePanel(); return; }
+
+    if (e.key !== 'Tab') return;
+    const items = Array.from(panel.querySelectorAll(FOCUSABLE))
+      .filter((el) => el.offsetParent !== null);
+    if (!items.length) return;
+
+    const first = items[0];
+    const last  = items[items.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
     }
   });
-
-  // Tab switching (visual only)
-  tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      tabs.forEach((t) => t.classList.remove('cp-tab--active'));
-      tab.classList.add('cp-tab--active');
-    });
-  });
-
-  // Footer "Contact Us" link also opens panel
-  const footerContactLink = document.querySelector('.footer-links .footer-link:last-child');
-  if (footerContactLink) {
-    footerContactLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      openPanel();
-    });
-  }
 
   // Form AJAX Submission
   const form      = document.getElementById('cp-form');

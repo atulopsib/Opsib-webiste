@@ -1,67 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Explore Platform — Opsib</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  
+
+  <!-- Fonts — Jost only; every --font-ui / --font-display rule depends on it -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
+
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body class="page-light">
+
+  <!-- Reading progress — position only, no content -->
+  <div class="read-progress" id="read-progress" aria-hidden="true"></div>
 
   <nav class="nav" aria-label="Main Navigation">
     <div class="nav-brand">
-      <a href="index.html" aria-label="Back to Home" style="display: flex; align-items: center; color: #000; text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.6" onmouseout="this.style.opacity=1">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <a href="index.html" class="nav-back" aria-label="Back to Home">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
       </a>
     </div>
   </nav>
 
-  <main class="article-container" style="padding-top: 100px;">
-    <!-- Header completely removed as requested -->
+  <main class="article-container" id="main">
     <div class="article-content">
-      <h2>What is OPSIB?</h2>
-      <p>OPSIB is a Retail Operations Intelligence Platform designed to give retail organizations a connected understanding of their entire operation. It brings together information from systems such as POS, ERP, WMS, inventory, suppliers, logistics, workforce systems, CCTV/computer vision and other operational sources, and turns these fragmented signals into one connected operational view. Instead of looking at isolated dashboards and systems, retail teams can understand what is happening across their stores, products, inventory, suppliers, transactions and operational events in one place.</p>
+      <h1>What is OPSIB?</h1>
+      <p>OPSIB is a Retail Operations Intelligence Platform designed to give retail organizations a connected
+        understanding of their entire operation. It brings together information from systems such as POS, ERP, WMS,
+        inventory, suppliers, logistics, workforce systems, CCTV/computer vision and other operational sources, and
+        turns these fragmented signals into one connected operational view. Instead of looking at isolated dashboards
+        and systems, retail teams can understand what is happening across their stores, products, inventory, suppliers,
+        transactions and operational events in one place.</p>
 
       <h2>The Retail Digital Twin</h2>
-      <p>At the center of OPSIB is the Retail Digital Twin. It represents the retail operation as a connected network of stores, SKUs, inventory, suppliers, warehouses, transfers, transactions, exceptions, workflows and events. The purpose is not simply to visualize data, but to understand the relationships between different parts of the business. For example, an inventory discrepancy can be connected to the affected store, SKU, transfer, distribution center, supplier and related operational history. This gives users context around an issue instead of showing only an isolated number.</p>
+      <p>At the center of OPSIB is the Retail Digital Twin. It represents the retail operation as a connected network of
+        stores, SKUs, inventory, suppliers, warehouses, transfers, transactions, exceptions, workflows and events. The
+        purpose is not simply to visualize data, but to understand the relationships between different parts of the
+        business. For example, an inventory discrepancy can be connected to the affected store, SKU, transfer,
+        distribution center, supplier and related operational history. This gives users context around an issue instead
+        of showing only an isolated number.</p>
 
       <h2>From Data to Intelligence</h2>
-      <p>OPSIB follows a connected intelligence flow: Data → Context → Digital Twin → Intelligence → Exception → Action → Memory. Operational data enters the platform and is mapped into a common retail model. The platform then uses business rules, anomaly detection, risk intelligence and operational context to identify important discrepancies, unusual behavior and potential risks. These signals can become prioritized exceptions that are assigned to the appropriate people and converted into workflows and actions.</p>
+      <p>OPSIB follows a connected intelligence flow: Data → Context → Digital Twin → Intelligence → Exception → Action
+        → Memory. Operational data enters the platform and is mapped into a common retail model. The platform then uses
+        business rules, anomaly detection, risk intelligence and operational context to identify important
+        discrepancies, unusual behavior and potential risks. These signals can become prioritized exceptions that are
+        assigned to the appropriate people and converted into workflows and actions.</p>
 
       <h2>One Platform, Different Perspectives</h2>
-      <p>OPSIB is designed around role-based intelligence. A COO can see enterprise-level priorities and operational exposure, while a Head of Operations can focus on network and store performance. A Regional Operations Manager works within their regional scope, while a Store Manager sees only the store they are responsible for. Loss Prevention can focus on loss and suspicious operational signals, while Supply Chain teams can focus on suppliers, warehouses, transfers, receiving and inventory movement. The platform therefore presents information relevant to each person's responsibility and scope.</p>
+      <p>OPSIB is designed around role-based intelligence. A COO can see enterprise-level priorities and operational
+        exposure, while a Head of Operations can focus on network and store performance. A Regional Operations Manager
+        works within their regional scope, while a Store Manager sees only the store they are responsible for. Loss
+        Prevention can focus on loss and suspicious operational signals, while Supply Chain teams can focus on
+        suppliers, warehouses, transfers, receiving and inventory movement. The platform therefore presents information
+        relevant to each person's responsibility and scope.</p>
 
       <h2>Operational Intelligence</h2>
-      <p>OPSIB is designed to help teams identify and understand operational issues such as inventory discrepancies, stockouts, transfer problems, supplier performance issues, receiving mismatches, unusual transactions, operational anomalies and other business exceptions. The important difference is that OPSIB connects these signals to their surrounding context. A discrepancy can be understood in relation to the store, product, supplier, transfer, financial impact, risk and previous events involved, helping teams determine what matters and what should happen next.</p>
+      <p>OPSIB is designed to help teams identify and understand operational issues such as inventory discrepancies,
+        stockouts, transfer problems, supplier performance issues, receiving mismatches, unusual transactions,
+        operational anomalies and other business exceptions. The important difference is that OPSIB connects these
+        signals to their surrounding context. A discrepancy can be understood in relation to the store, product,
+        supplier, transfer, financial impact, risk and previous events involved, helping teams determine what matters
+        and what should happen next.</p>
 
       <h2>Exceptions, Workflows and Alerts</h2>
-      <p>The Exceptions Center surfaces important operational discrepancies and priorities. Workflows represent the actions being taken to resolve those issues, including ownership, status and progress. Alerts bring important events or required attention to the appropriate users. Together, these capabilities create a path from detecting an operational problem to assigning responsibility and tracking resolution.</p>
+      <p>The Exceptions Center surfaces important operational discrepancies and priorities. Workflows represent the
+        actions being taken to resolve those issues, including ownership, status and progress. Alerts bring important
+        events or required attention to the appropriate users. Together, these capabilities create a path from detecting
+        an operational problem to assigning responsibility and tracking resolution.</p>
 
       <h2>Knowledge, Relationships and Memory</h2>
-      <p>The OPSIB Knowledge Graph provides an interactive way to explore relationships between retail entities. Users can move from a store to its products, inventory, transfers, suppliers, warehouses and exceptions and understand how those entities are connected. OPSIB also maintains operational history and memory so that current issues can be viewed in the context of previous events and recurring patterns where the available data supports them.</p>
+      <p>The OPSIB Knowledge Graph provides an interactive way to explore relationships between retail entities. Users
+        can move from a store to its products, inventory, transfers, suppliers, warehouses and exceptions and understand
+        how those entities are connected. OPSIB also maintains operational history and memory so that current issues can
+        be viewed in the context of previous events and recurring patterns where the available data supports them.</p>
 
       <h2>OPSYN</h2>
-      <p>OPSYN is the conversational intelligence interface of OPSIB. Users can ask operational questions such as what needs attention, which stores have the highest risk, why inventory variance increased, or which suppliers are creating problems. OPSYN is intended to work from the same connected operational data and respect the user's role and access scope, allowing answers to lead back to the underlying stores, exceptions, workflows and other entities.</p>
+      <p>OPSYN is the conversational intelligence interface of OPSIB. Users can ask operational questions such as what
+        needs attention, which stores have the highest risk, why inventory variance increased, or which suppliers are
+        creating problems. OPSYN is intended to work from the same connected operational data and respect the user's
+        role and access scope, allowing answers to lead back to the underlying stores, exceptions, workflows and other
+        entities.</p>
 
       <h2>A Connected Operating Layer for Retail</h2>
-      <p>The overall purpose of OPSIB is to create a common intelligence layer across the retail operation. It connects existing systems rather than requiring teams to replace every system they already use, creates a connected operational model, identifies what requires attention, explains the context behind important signals and helps the right people take action. The platform is intended to move retail operations from fragmented data and reactive monitoring toward connected, context-aware and action-oriented operational intelligence.</p>
+      <p>The overall purpose of OPSIB is to create a common intelligence layer across the retail operation. It connects
+        existing systems rather than requiring teams to replace every system they already use, creates a connected
+        operational model, identifies what requires attention, explains the context behind important signals and helps
+        the right people take action. The platform is intended to move retail operations from fragmented data and
+        reactive monitoring toward connected, context-aware and action-oriented operational intelligence.</p>
 
       <h2>OPSIB in One Line</h2>
-      <p>OPSIB connects retail systems, understands the relationships across the operation, identifies what matters, explains why it matters, and helps the right person take action.</p>
+      <p>OPSIB connects retail systems, understands the relationships across the operation, identifies what matters,
+        explains why it matters, and helps the right person take action.</p>
 
     </div>
   </main>
 
-  <footer style="text-align: center; padding: 40px; background: #fff; border-top: 1px solid rgba(0,0,0,0.06); font-family: var(--font-ui); font-size: 12px; color: rgba(0,0,0,0.4);">
-    &copy; 2025 Opsib. All rights reserved.
+  <footer class="article-footer">
+    <span class="footer-copy">&copy; 2025 Opsib. All rights reserved.</span>
   </footer>
 
+  <script src="script.js"></script>
 </body>
+
 </html>

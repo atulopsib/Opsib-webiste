@@ -4,71 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Careers — Opsib</title>
-  
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  
-  <!-- Styles -->
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* Careers specific styles */
-    body {
-      background: var(--color-bg);
-      color: var(--white);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      font-family: var(--font-body);
-    }
-    .careers-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: var(--px);
-      padding-top: 120px;
-    }
-    .careers-title {
-      font-family: var(--font-display);
-      font-size: clamp(32px, 5vw, 56px);
-      font-weight: 500;
-      letter-spacing: -0.02em;
-      margin-bottom: 24px;
-      line-height: 1.1;
-      color: var(--white);
-      max-width: 800px;
-    }
-    .careers-subtitle {
-      font-size: 16px;
-      color: rgba(255,255,255,0.6);
-      margin-bottom: 48px;
-    }
-    .careers-email {
-      color: var(--white);
-      text-decoration: underline;
-      text-underline-offset: 4px;
-    }
-    .careers-email:hover {
-      color: rgba(255,255,255,0.8);
-    }
-  </style>
-</head>
-<body>
 
-  <!-- Minimal Nav -->
-  <nav class="nav" aria-label="Main Navigation">
+  <!-- Fonts — Jost only; every --font-ui / --font-display rule depends on it -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
+
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="page-inverse">
+
+  <nav class="nav nav--inverse" aria-label="Main Navigation">
     <div class="nav-brand">
-      <a href="index.html" aria-label="Opsib Home" class="nav-logo-link">
-        <img src="logo.png" alt="Opsib Logo" class="nav-logo" />
+      <a href="index.html" aria-label="Opsib Home" class="nav-logo">
+        <img src="logo.png" alt="Opsib" class="nav-logo-img" width="640" height="351" />
       </a>
     </div>
   </nav>
 
-  <main class="careers-content">
+  <main class="careers-content" id="main">
     <h1 class="careers-title">Always hiring for best talents around the globe</h1>
     <p class="careers-subtitle">Mail to <a href="mailto:atul@opsib.com" class="careers-email">atul@opsib.com</a> with your resume and coverletter.</p>
   </main>

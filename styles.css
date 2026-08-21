@@ -1,112 +1,303 @@
 /* ═══════════════════════════════════════════════════════════════
    OPSIB — Retail Operations Intelligence
-   Complete Design System · Enterprise Edition · v2.0
+   Design System · Enterprise Edition · v3.0
+
+   ── CONTENTS ──────────────────────────────────────────────────
+   01  DESIGN TOKENS
+   02  RESET & BASE
+   03  ACCESSIBILITY PRIMITIVES
+   04  LAYOUT PRIMITIVES
+   05  TYPOGRAPHY
+   06  MOTION UTILITIES
+   07  COMPONENT · NAVIGATION
+   08  COMPONENT · BUTTONS
+   09  COMPONENT · FOOTER
+   10  COMPONENT · CONTACT PANEL
+   11  COMPONENT · MEDIA
+   12  PAGE · HOME
+   13  PAGE · ARTICLE
+   14  PAGE · CAREERS
+   15  KEYFRAMES
+   16  RESPONSIVE
+
+   ── AUTHORING RULES ───────────────────────────────────────────
+   · No raw colour values outside §01. Components consume tokens.
+   · No @media blocks outside §16. Each breakpoint appears EXACTLY
+     ONCE, ordered widest → narrowest. Max-width queries authored
+     out of order silently override narrower breakpoints; that is
+     what regressed five prior fixes in v2.0.
+   · Animate only `opacity` and `transform`. Never `transition: all`.
+   · `will-change` is applied transiently by class, never statically.
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── RESET ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-img, video { display: block; max-width: 100%; }
-ul { list-style: none; }
-a { text-decoration: none; }
 
-/* ── DESIGN TOKENS ── */
+/* ═══════════════════════════════════════════════════════════════
+   01 · DESIGN TOKENS
+═══════════════════════════════════════════════════════════════ */
 :root {
-  /* ── Dark surface ── */
-  --color-dark-bg:          #04060f;
-  --color-dark-surface:     #080b17;
-  --color-dark-footer:      #06080f;
-  --color-dark-border:      rgba(255,255,255,0.10);
-  --color-dark-border-dim:  rgba(255,255,255,0.05);
-  --color-dark-grid:        rgba(255,255,255,0.035);
-  --color-dark-grid-strong: rgba(255,255,255,0.07);
 
-  /* ── Dark text ── */
-  --color-white:      #ffffff;
-  --color-dark-text:  rgba(255,255,255,0.90);
-  --color-dark-mid:   rgba(255,255,255,0.55);
-  --color-dark-dim:   rgba(255,255,255,0.30);
-  --color-dark-meta:  rgba(255,255,255,0.20);
+  /* ── Tier 1 · Raw palette ─────────────────────────────────── */
+  --ink-950:   #04060f;
+  --ink-900:   #06080f;
 
-  /* ── Light surface ── */
-  --color-light-bg:      #f6f6f3;
-  --color-light-mid-bg:  #ebedf2;
-  --color-light-surface: #ffffff;
+  --paper-000: #ffffff;
+  --paper-050: #fafaf8;
+  --paper-100: #f6f6f3;
+  --paper-200: #ebedf2;
 
-  /* ── Light text ── */
-  --color-light-text:   #0a0a0a;
-  --color-light-mid:    #3a3a3a;
-  --color-light-dim:    #888888;
-  --color-light-body:   #555555;
-  --color-light-border: rgba(0,0,0,0.08);
+  --graphite-900: #0a0a0a;
+  --graphite-800: #2a2a2a;
+  --graphite-700: #2e2e2e;
+  --graphite-500: #555555;
+  --graphite-400: #888888;
 
-  /* ── Backward-compat aliases ── */
-  --bg:           var(--color-dark-bg);
-  --surface:      var(--color-dark-surface);
-  --border:       var(--color-dark-border);
-  --border-dim:   var(--color-dark-border-dim);
-  --grid:         var(--color-dark-grid);
-  --grid-strong:  var(--color-dark-grid-strong);
-  --white:        var(--color-white);
-  --dim:          var(--color-dark-mid);
-  --dim-2:        var(--color-dark-dim);
-  --meta:         var(--color-dark-meta);
-  --light-bg:     var(--color-light-bg);
-  --light-surface:var(--color-light-surface);
-  --light-text:   var(--color-light-text);
-  --light-mid:    var(--color-light-mid);
-  --light-dim:    var(--color-light-dim);
-  --light-border: var(--color-light-border);
+  --signal-critical: #cc0000;
 
-  /* ── Typography ── */
-  --font-display: 'Jost', sans-serif;
-  --font-ui:      'Jost', sans-serif;
+  /* ── Tier 2 · Surfaces ────────────────────────────────────── */
+  /* Light scale is a deliberate three-step sequence, not three
+     identical whites. See §12 for the section assignment map. */
+  --surface-canvas:       var(--paper-000);
+  --surface-raised:       var(--paper-050);
+  --surface-sunken:       var(--paper-200);
+  --surface-frame:        var(--paper-100);
+  --surface-inverse:      var(--ink-950);
+  --surface-inverse-deep: var(--ink-900);
 
-  /* ── Border-radius system (3 values only) ── */
+  /* ── Tier 2 · Text on light ───────────────────────────────── */
+  --text-primary:     var(--graphite-900);
+  --text-body:        var(--graphite-700);
+  --text-secondary:   var(--graphite-500);
+  --text-tertiary:    var(--graphite-400);
+  --text-muted:       rgba(4, 6, 15, 0.45);
+  --text-faint:       rgba(4, 6, 15, 0.34);
+  --text-placeholder: rgba(4, 6, 15, 0.20);
+  --text-link-muted:  rgba(4, 6, 15, 0.55);
+
+  /* ── Tier 2 · Text on inverse ─────────────────────────────── */
+  /* Contrast floor: on --ink-900, alpha 0.62 ≈ 5.2:1 and 0.58 ≈
+     4.6:1. Anything carrying real content stays at or above 0.62.
+     --decor is reserved for aria-hidden ornament ONLY, where the
+     contrast minimum does not apply. */
+  --text-on-inverse:        #ffffff;
+  --text-on-inverse-strong: rgba(255, 255, 255, 0.85);
+  --text-on-inverse-body:   rgba(255, 255, 255, 0.62);
+  --text-on-inverse-decor:  rgba(255, 255, 255, 0.30);
+
+  /* ── Tier 2 · Borders on light ────────────────────────────── */
+  --border-hairline: rgba(4, 6, 15, 0.07);
+  --border-subtle:   rgba(4, 6, 15, 0.14);
+  --border-strong:   rgba(4, 6, 15, 0.24);
+
+  /* ── Tier 2 · Borders on inverse ──────────────────────────── */
+  --border-hairline-inverse: rgba(255, 255, 255, 0.06);
+  --border-subtle-inverse:   rgba(255, 255, 255, 0.12);
+  --border-mid-inverse:      rgba(255, 255, 255, 0.20);
+  --border-strong-inverse:   rgba(255, 255, 255, 0.28);
+  --border-emphasis-inverse: rgba(255, 255, 255, 0.60);
+
+  /* ── Tier 2 · Scrims & fills ─────────────────────────────── */
+  --scrim-mid:    rgba(4, 6, 15, 0.58);
+  --scrim-strong: rgba(4, 6, 15, 0.65);
+  --fill-inverse:       rgba(255, 255, 255, 0.06);
+  --fill-inverse-hover: rgba(255, 255, 255, 0.08);
+  --fill-hover:         rgba(4, 6, 15, 0.04);
+
+  /* ── Tier 2 · Hero decorative layers ─────────────────────── */
+  --hero-grid-line: rgba(255, 255, 255, 0.035);
+  --hero-grid-mark: rgba(255, 255, 255, 0.07);
+  /* H1 accent line. Raised from 0.55 so the third headline line
+     stays legible over the brightest frames of the hero video
+     while preserving the intended luminance step-down. */
+  --text-on-inverse-accent: rgba(255, 255, 255, 0.72);
+  --text-on-inverse-hint:   rgba(255, 255, 255, 0.42);
+
+  /* Translucent surfaces (backdrop-filter companions) */
+  --surface-inverse-glass:    rgba(4, 6, 15, 0.65);
+  --surface-inverse-scrolled: rgba(4, 6, 15, 0.90);
+  --surface-frame-glass:      rgba(246, 246, 243, 0.85);
+
+  /* ── Tier 2 · Feedback ────────────────────────────────────── */
+  --feedback-ok-bg:  #f0fdf4;
+  --feedback-ok-fg:  #166534;
+  --feedback-ok-br:  #bbf7d0;
+  --feedback-err-bg: #fef2f2;
+  --feedback-err-fg: #991b1b;
+  --feedback-err-br: #fecaca;
+
+  /* ── Tier 2 · Focus ───────────────────────────────────────── */
+  /* Redefined on inverse surfaces in §03 so the ring inherits
+     the correct contrast for its context. */
+  --focus-ring: rgba(4, 6, 15, 0.85);
+
+  /* ── Typography · families ───────────────────────────────── */
+  --font-ui:      'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-ui);
+
+  /* ── Typography · scale ──────────────────────────────────── */
+  /* Role assignments are fixed and ranked. --t-h1 (the section
+     statement, the page's primary claim) MUST outrank --t-h2.
+     v2.0 had this inverted: the mission H2 ceiling was 40px
+     against the statement's 34px.
+     Nothing in this scale drops below 10px. */
+  /* One fluid ramp each, monotonic across the whole viewport range.
+     v2.0 layered breakpoint overrides on top of these and ended up
+     with a headline that GREW as the screen shrank (40px at 600px
+     wide, 45px at 500px). There are no per-breakpoint font-size
+     overrides for either of these two roles. */
+  --t-display: clamp(24px, 4.8vw, 72px);  /* hero H1 only       */
+  --t-h1:      clamp(20px, 3.4vw, 46px);  /* section statement  */
+  --t-h2:      clamp(22px, 2.6vw, 34px);  /* mission            */
+  --t-h3:      clamp(20px, 2.5vw, 28px);  /* panel headline     */
+  --t-h4:      clamp(19px, 1.7vw, 23px);  /* article heads      */
+  --t-body-lg: 16px;
+  --t-body:    15px;
+  --t-body-sm: 13px;
+  --t-eyebrow: 11px;
+  --t-label:   10px;
+  --t-btn:     11px;
+  --t-meta:    10px;
+  --t-legal:   11px;
+
+  /* ── Typography · tracking ───────────────────────────────── */
+  --track-display: 0.01em;
+  --track-tight:   -0.02em;
+  --track-snug:    -0.01em;
+  --track-eyebrow: 0.22em;
+  --track-label:   0.18em;
+  --track-btn:     0.12em;
+  --track-meta:    0.18em;
+  --track-title:   0.20em;
+
+  /* ── Radius ──────────────────────────────────────────────── */
   --radius-pill: 100px;
   --radius-card: 16px;
   --radius-sm:   4px;
 
-  /* ── Motion ── */
-  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
-  --dur-fast:    0.18s;
-  --dur-mid:     0.32s;
-  --dur-slow:    0.6s;
+  /* ── Elevation ───────────────────────────────────────────── */
+  --shadow-md:    0 12px 36px -8px rgba(4, 6, 15, 0.12), 0 0 0 1px rgba(4, 6, 15, 0.04);
+  --shadow-lg:    0 24px 48px -12px rgba(4, 6, 15, 0.20), 0 0 0 1px rgba(4, 6, 15, 0.06);
+  --shadow-nav:   0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-panel: -8px 0 40px rgba(0, 0, 0, 0.18);
 
-  /* ── Spacing scale ── */
-  --space-xs:  8px;
-  --space-sm:  16px;
-  --space-md:  32px;
-  --space-lg:  64px;
-  --space-xl:  96px;
-  --space-2xl: 140px;
+  /* ── Motion ──────────────────────────────────────────────── */
+  --dur-instant: 100ms;
+  --dur-fast:    180ms;
+  --dur-mid:     320ms;
+  --dur-slow:    500ms;
+  --dur-reveal:  750ms;
 
-  /* ── Section rhythm ── */
-  --section-pad-lg: clamp(80px, 10vw, 140px);
-  --section-pad-md: clamp(64px, 8vw,  108px);
-  --section-pad-sm: clamp(48px, 6vw,   80px);
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* ── Container system ── */
-  --container-max: 1200px;
-  --px: clamp(24px, 5.5vw, 80px);
+  /* ── Spacing · 4px base ──────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  28px;
+  --space-8:  32px;
+  --space-9:  36px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Section rhythm ──────────────────────────────────────── */
+  --section-pad-md: clamp(64px, 8vw, 108px);
+  --section-pad-sm: clamp(48px, 6vw, 80px);
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  --container-max:   1200px;
+  --container-text:  880px;
+  --container-prose: 800px;
+  --px:              clamp(24px, 5.5vw, 80px);
+
+  /* ── Component metrics ───────────────────────────────────── */
+  /* Footer logo is proportional to the nav logo, not 2.2x it. */
+  --logo-h-nav:    38px;
+  --logo-h-footer: 48px;
+  --nav-pad-y:     10px;
+  --nav-pad-x:     20px;
+  --nav-h:         64px;
+  /* min() so short and landscape viewports never overflow. */
+  --hero-min-h:    min(720px, 100vh);
+  --hero-bar-h:    40px;
+  --panel-w:       520px;
 }
 
-/* ── BASE ── */
+
+/* ═══════════════════════════════════════════════════════════════
+   02 · RESET & BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+img, video { display: block; max-width: 100%; }
+ul { list-style: none; }
+a  { text-decoration: none; }
+
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--bg);
-  color: var(--white);
+  background: var(--surface-inverse);
+  color: var(--text-on-inverse);
   font-family: var(--font-ui);
   overflow-x: hidden;
 }
 
-/* ── SHARED SECTION CONTAINER ── */
+
+/* ═══════════════════════════════════════════════════════════════
+   03 · ACCESSIBILITY PRIMITIVES
+═══════════════════════════════════════════════════════════════ */
+
+/* Contextual focus ring — inverse surfaces redefine the token so
+   descendants inherit a ring that actually contrasts. */
+.hero,
+.hero-spacer,
+.hero-nav-wrapper,
+.site-footer {
+  --focus-ring: rgba(255, 255, 255, 0.92);
+}
+
+:where(a, button, input, select, textarea, video, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html { scroll-behavior: auto; }
+
+  /* Critical: scroll-revealed content must not be trapped at
+     opacity:0 when its animation is neutralised. */
+  .reveal,
+  .headline-word,
+  .headline-word--accent,
+  .hero-cta-row,
+  .hero-scroll-hint,
+  .hero-bar,
+  .retail-statement {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   04 · LAYOUT PRIMITIVES
+═══════════════════════════════════════════════════════════════ */
 .section-container {
   max-width: var(--container-max);
   width: 100%;
@@ -115,66 +306,708 @@ body {
   padding-right: var(--px);
 }
 
-/* ── SHARED SECTION EYEBROW ── */
-.section-eyebrow {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  line-height: 1.4;
+/* Every page section that scrolls over the fixed hero needs its
+   own stacking context above it. */
+.retail-section,
+.how-bridge,
+.mission-section,
+.demo-cta-section,
+.site-footer {
+  position: relative;
+  z-index: 1;
 }
 
-/* ════════════════════════════════════════════════════════
-   SCROLL-REVEAL UTILITY
-════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════
+   05 · TYPOGRAPHY
+═══════════════════════════════════════════════════════════════ */
+
+/* Shared eyebrow — one rule, consumed by every section label.
+   Replaces the former .how-eyebrow duplicate. */
+.section-eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--t-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   06 · MOTION UTILITIES
+═══════════════════════════════════════════════════════════════ */
 .reveal {
   opacity: 0;
   transform: translateY(28px);
-  transition: opacity 0.75s var(--ease-out), transform 0.75s var(--ease-out);
+  transition: opacity var(--dur-reveal) var(--ease-out),
+              transform var(--dur-reveal) var(--ease-out);
 }
 .reveal.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Applied dynamically by script.js to stagger footer columns. */
 .reveal-delay-1 { transition-delay: 0.08s; }
 .reveal-delay-2 { transition-delay: 0.16s; }
 .reveal-delay-3 { transition-delay: 0.24s; }
 .reveal-delay-4 { transition-delay: 0.32s; }
 
-/* ════════════════════════════════════════════════════════
-   ① HERO — fixed background layer
-   Sections below scroll OVER the fixed hero
-════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════
+   07 · COMPONENT · NAVIGATION
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Standard bar — subpages ──────────────────────────────── */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  height: var(--nav-h);
+  padding: 0 var(--px);
+  background: var(--surface-frame-glass);
+  border-bottom: 1px solid var(--border-hairline);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+}
+
+/* Inverse surface variant (careers). */
+.nav--inverse {
+  background: var(--surface-inverse-glass);
+  border-bottom-color: var(--border-hairline-inverse);
+  --focus-ring: rgba(255, 255, 255, 0.92);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Back affordance — replaces inline onmouseover handlers. */
+.nav-back {
+  display: flex;
+  align-items: center;
+  color: var(--text-primary);
+  transition: opacity var(--dur-fast) var(--ease-standard),
+              transform var(--dur-fast) var(--ease-standard);
+}
+.nav-back:hover { opacity: 0.6; transform: translateX(-2px); }
+
+.nav--inverse .nav-back { color: var(--text-on-inverse); }
+
+/* ── Home — floating glass pill ───────────────────────────── */
+.hero-nav-wrapper {
+  position: fixed;
+  top: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(88%, var(--container-max));
+  z-index: 100;
+  animation: slideDown 0.9s var(--ease-out) both;
+}
+
+.hero-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--nav-pad-y) var(--nav-pad-x);
+  background: var(--surface-inverse-glass);
+  border: 1px solid var(--border-subtle-inverse);
+  border-radius: var(--radius-pill);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow: var(--shadow-nav);
+  transition: background var(--dur-mid) var(--ease-standard),
+              border-color var(--dur-mid) var(--ease-standard);
+}
+
+/* Scroll state — was two inline style writes per scroll tick. */
+.hero-nav.is-scrolled {
+  background: var(--surface-inverse-scrolled);
+  border-color: var(--border-mid-inverse);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.nav-logo-img {
+  height: var(--logo-h-nav);
+  width: auto;
+  display: block;
+  object-fit: contain;
+  transition: transform var(--dur-mid) var(--ease-out);
+}
+.nav-logo:hover .nav-logo-img { transform: scale(1.03); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   08 · COMPONENT · BUTTONS
+═══════════════════════════════════════════════════════════════ */
+
+/* One base, five states, four surface modifiers. Every button in
+   the product is a member — including the primary conversion CTA,
+   which in v2.0 shared nothing with the other four. */
+.btn {
+  font-family: var(--font-ui);
+  font-size: var(--t-btn);
+  font-weight: 600;
+  letter-spacing: var(--track-btn);
+  text-transform: uppercase;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 12px var(--space-6);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color        var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard),
+              background   var(--dur-fast) var(--ease-standard),
+              opacity      var(--dur-fast) var(--ease-standard),
+              transform    var(--dur-fast) var(--ease-standard);
+}
+
+/* Press feedback — settles the hover lift. */
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  transition-duration: var(--dur-instant);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Trailing icon advances on hover to signal direction. */
+.btn__icon {
+  display: inline-flex;
+  align-items: center;
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+.btn:hover:not(:disabled) .btn__icon { transform: translateX(3px); }
+
+/* ── A · Glass pill, on inverse (nav) ─────────────────────── */
+.btn--glass {
+  color: var(--text-on-inverse);
+  padding: 9px 22px;
+  border-color: var(--border-mid-inverse);
+  border-radius: var(--radius-pill);
+  background: var(--fill-inverse);
+}
+.btn--glass:hover:not(:disabled) {
+  color: var(--surface-inverse);
+  border-color: var(--text-on-inverse);
+  background: var(--text-on-inverse);
+  transform: translateY(-1px);
+}
+
+/* ── B · Outlined, on inverse (hero) ─────────────────────── */
+.btn--outline-inverse {
+  color: var(--text-on-inverse);
+  border-color: var(--border-strong-inverse);
+}
+.btn--outline-inverse:hover:not(:disabled) {
+  border-color: var(--border-emphasis-inverse);
+  background: var(--fill-inverse-hover);
+  transform: translateY(-1px);
+}
+
+/* ── C · Outlined, on light (mission) ────────────────────── */
+.btn--outline {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.btn--outline:hover:not(:disabled) {
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--surface-canvas);
+  transform: translateY(-1px);
+}
+
+/* ── D · Solid, on light (submit + primary conversion) ───── */
+.btn--solid {
+  color: var(--surface-canvas);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+}
+.btn--solid:hover:not(:disabled) {
+  background: var(--graphite-800);
+  border-color: var(--graphite-800);
+  transform: translateY(-1px);
+}
+
+/* ── Size modifier · the conversion moment ───────────────── */
+/* Emphasis comes from scale and figure/ground inversion, not from
+   a different typographic language. */
+.btn--lg { padding: 18px var(--space-10); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   09 · COMPONENT · FOOTER
+═══════════════════════════════════════════════════════════════ */
+.site-footer {
+  background: var(--surface-inverse-deep);
+  border-top: 1px solid var(--border-hairline-inverse);
+  font-family: var(--font-ui);
+  color: var(--text-on-inverse);
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: clamp(24px, 3vw, 48px);
+  padding: var(--section-pad-md) var(--px) var(--section-pad-sm);
+  border-bottom: 1px solid var(--border-hairline-inverse);
+}
+
+.footer-col--brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-right: var(--space-12);
+}
+
+.footer-logo-img {
+  height: var(--logo-h-footer);
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* Aligned to the logo's own left edge. v2.0 used padding-left:92px
+   to optically align with the wordmark *inside* the logo bitmap —
+   a magic number that broke whenever the logo height changed. */
+.footer-tagline {
+  font-size: var(--t-body-sm);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--text-on-inverse-body);
+  margin: 0;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.footer-col-title {
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: var(--track-title);
+  text-transform: uppercase;
+  color: var(--text-on-inverse-body);
+  margin: 0;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border-hairline-inverse);
+}
+
+/* Occupies the title row so the column aligns to the same grid as
+   its siblings, but renders nothing. Replaces an inline
+   style="margin-top:26px" hack that faked the same offset with a
+   magic number. Remains in the accessibility tree, so the link
+   group keeps a name. */
+.footer-col-title--silent {
+  color: transparent;
+  border-bottom-color: transparent;
+  user-select: none;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Links and non-interactive labels must NOT look identical.
+   v2.0 gave 12 static feature names the exact same colour as real
+   links, creating a false affordance across half the footer.
+   Because every string here still needs >=4.5:1, the fix raises
+   links rather than dimming labels. */
+.footer-link,
+.footer-static-text {
+  font-size: var(--t-body-sm);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  display: inline-block;
+}
+.footer-static-text {
+  color: var(--text-on-inverse-body);
+  cursor: default;
+}
+.footer-link {
+  color: var(--text-on-inverse-strong);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.footer-link:hover { color: var(--text-on-inverse); }
+
+/* The contact trigger is a real <button> now, not an
+   <a href="javascript:void(0)">. Reset it to match sibling links. */
+.footer-link--button {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px var(--px);
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.footer-copy {
+  font-size: var(--t-legal);
+  font-weight: 400;
+  color: var(--text-on-inverse-body);
+  letter-spacing: 0.04em;
+}
+
+.footer-legal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+  flex-wrap: wrap;
+}
+
+.footer-legal-link {
+  font-size: var(--t-legal);
+  font-weight: 400;
+  color: var(--text-on-inverse-body);
+  letter-spacing: 0.03em;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.footer-legal-link:hover { color: var(--text-on-inverse); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   10 · COMPONENT · CONTACT PANEL
+═══════════════════════════════════════════════════════════════ */
+.contact-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim-mid);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.contact-overlay.is-open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* visibility:hidden while closed removes the panel's 8 form controls
+   from the tab order. v2.0 left them focusable off-screen, so
+   keyboard users tabbed into an invisible form. Transitioning
+   visibility alongside transform preserves the slide, because
+   visibility snaps at the end of the duration rather than
+   interpolating. `inert` is also set by script.js. */
+.contact-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(var(--panel-w), 100vw);
+  height: 100dvh;
+  background: var(--surface-canvas);
+  z-index: 901;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform var(--dur-slow) var(--ease-out),
+              visibility var(--dur-slow) linear;
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+.contact-panel.is-open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.cp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px var(--space-7);
+  border-bottom: 1px solid var(--border-hairline);
+  flex-shrink: 0;
+  gap: var(--space-3);
+}
+
+.cp-label-header {
+  font-family: var(--font-ui);
+  font-size: var(--t-meta);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.cp-close {
+  width: var(--space-8);
+  height: var(--space-8);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard),
+              background var(--dur-fast) var(--ease-standard);
+}
+.cp-close:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background: var(--fill-hover);
+}
+
+.cp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-9) var(--space-7) var(--space-12);
+  scroll-behavior: smooth;
+}
+.cp-body::-webkit-scrollbar       { width: 4px; }
+.cp-body::-webkit-scrollbar-track { background: transparent; }
+.cp-body::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
+
+.cp-headline {
+  font-family: var(--font-ui);
+  font-size: var(--t-h3);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: var(--track-tight);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-9);
+}
+.cp-headline em {
+  font-style: italic;
+  font-weight: 600;
+}
+
+.cp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cp-row--2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.cp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cp-label {
+  font-family: var(--font-ui);
+  font-size: var(--t-meta);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.cp-req { color: var(--signal-critical); }
+
+.cp-input {
+  font-family: var(--font-ui);
+  font-size: var(--t-body-sm);
+  font-weight: 400;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-2) 0;
+  border-radius: 0;
+  width: 100%;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cp-input:focus        { border-bottom-color: var(--text-primary); }
+.cp-input::placeholder { color: var(--text-placeholder); }
+
+/* Per-field error identification. Eight required fields previously
+   had no field-level affordance at all — a failed submit surfaced
+   one summary line with no way to tell which field was at fault.
+   :user-invalid only fires after interaction, so fields never look
+   wrong before they have been touched. No copy is introduced. */
+.cp-input:user-invalid {
+  border-bottom-color: var(--signal-critical);
+}
+.cp-field:has(.cp-input:user-invalid) .cp-label {
+  color: var(--signal-critical);
+}
+.cp-textarea:user-invalid { border-color: var(--signal-critical); }
+
+.cp-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cp-select {
+  background-image: url(data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E);
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+  padding-right: var(--space-5);
+  cursor: pointer;
+}
+
+.cp-textarea {
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.55;
+  border: 1px solid var(--border-subtle);
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.cp-textarea:focus { border-color: var(--text-primary); }
+
+.cp-status {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-1);
+}
+.cp-status--success {
+  background: var(--feedback-ok-bg);
+  color: var(--feedback-ok-fg);
+  border: 1px solid var(--feedback-ok-br);
+}
+.cp-status--error {
+  background: var(--feedback-err-bg);
+  color: var(--feedback-err-fg);
+  border: 1px solid var(--feedback-err-br);
+}
+
+/* Submit inherits .btn .btn--solid; only layout is local. */
+.cp-submit {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  padding: 13px var(--space-7);
+}
+
+.cp-privacy {
+  font-size: var(--t-legal);
+  color: var(--text-faint);
+  line-height: 1.6;
+  margin-top: var(--space-1);
+}
+.cp-privacy-link {
+  color: var(--text-link-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.cp-privacy-link:hover { color: var(--text-primary); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   11 · COMPONENT · MEDIA
+═══════════════════════════════════════════════════════════════ */
+
+/* Video well — recessed frame for the product overview. */
+.how-video-wrap {
+  width: 100%;
+  border-radius: var(--radius-card);
+  background: var(--surface-inverse);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.how-video-player {
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
+  border-radius: var(--radius-card);
+  background: var(--surface-inverse);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   12 · PAGE · HOME
+═══════════════════════════════════════════════════════════════ */
+
+/* ── ① HERO — fixed layer; sections scroll over it ─────────── */
 .hero {
-  position: fixed;        /* stays locked in viewport */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100vh;
-  min-height: 720px;
+  min-height: var(--hero-min-h);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  z-index: 0;             /* below all page sections (z-index 1) */
+  z-index: 0;
 }
 
-/* Scroll-height spacer — keeps scroll distance while hero is fixed */
+/* Scroll-height spacer — holds hero content in normal flow. */
 .hero-spacer {
   height: 100vh;
-  min-height: 720px;
+  min-height: var(--hero-min-h);
   position: relative;
-  z-index: 1; /* Above the fixed hero */
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-/* ── Video bg ── */
-.hero-bg { position: absolute; inset: 0; z-index: 0; }
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* Prevents a black flash before the remote video resolves. */
+  background: var(--surface-inverse);
+}
 
 .hero-video {
   position: absolute;
@@ -187,18 +1020,16 @@ body {
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(4, 6, 15, 0.58);
+  background: var(--scrim-mid);
 }
 
 .hero-vignette {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse 130% 110% at 50% 50%,
-      transparent 28%, rgba(4,6,15,0.65) 100%);
+  background: radial-gradient(ellipse 130% 110% at 50% 50%,
+    transparent 28%, var(--scrim-strong) 100%);
 }
 
-/* Noise texture overlay */
 .hero-overlay::after {
   content: '';
   position: absolute;
@@ -209,23 +1040,24 @@ body {
   pointer-events: none;
 }
 
-/* ── Grid ── */
+/* ── Grid overlay ─────────────────────────────────────────── */
 .hero-grid {
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  will-change: transform;
 }
+/* Transient compositor hint — script.js adds this only while the
+   parallax is actively being driven. */
+.hero-grid.is-parallax { will-change: transform; }
 
 .grid-h {
   position: absolute;
   inset: 0;
   background-image: repeating-linear-gradient(
     to bottom,
-    var(--grid) 0, var(--grid) 1px,
-    transparent 1px, transparent 88px
-  );
+    var(--hero-grid-line) 0, var(--hero-grid-line) 1px,
+    transparent 1px, transparent 88px);
 }
 
 .grid-v {
@@ -233,21 +1065,20 @@ body {
   inset: 0;
   background-image: repeating-linear-gradient(
     to right,
-    var(--grid) 0, var(--grid) 1px,
-    transparent 1px, transparent 120px
-  );
+    var(--hero-grid-line) 0, var(--hero-grid-line) 1px,
+    transparent 1px, transparent 120px);
 }
 
 .grid-corner {
   position: absolute;
   width: 44px;
   height: 44px;
-  border-color: var(--grid-strong);
+  border-color: var(--hero-grid-mark);
   border-style: solid;
   border-width: 0;
 }
-.grid-corner.tl { top: 7%;  left: 5%;  border-top-width: 1px; border-left-width: 1px; }
-.grid-corner.tr { top: 7%;  right: 5%; border-top-width: 1px; border-right-width: 1px; }
+.grid-corner.tl { top: 7%;    left: 5%;  border-top-width: 1px;    border-left-width: 1px; }
+.grid-corner.tr { top: 7%;    right: 5%; border-top-width: 1px;    border-right-width: 1px; }
 .grid-corner.bl { bottom: 7%; left: 5%;  border-bottom-width: 1px; border-left-width: 1px; }
 .grid-corner.br { bottom: 7%; right: 5%; border-bottom-width: 1px; border-right-width: 1px; }
 
@@ -256,12 +1087,12 @@ body {
   top: 50%;
   width: 12px;
   height: 1px;
-  background: var(--grid-strong);
+  background: var(--hero-grid-mark);
 }
 .tick-left  { left:  5%; }
 .tick-right { right: 5%; }
 
-/* ── Meta tags ── */
+/* ── System metadata ──────────────────────────────────────── */
 .hero-meta {
   position: absolute;
   inset: 0;
@@ -272,11 +1103,11 @@ body {
 .meta-tag {
   position: absolute;
   font-family: var(--font-ui);
-  font-size: 9px;
+  font-size: var(--t-meta);
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--track-meta);
   text-transform: uppercase;
-  color: var(--meta);
+  color: var(--text-on-inverse-decor);
   white-space: nowrap;
   line-height: 1;
 }
@@ -289,81 +1120,7 @@ body {
 [data-pos=bl2] { bottom: 17%; left: 14%; }
 [data-pos=br1] { bottom: 20%; right: 5.5%; }
 
-/* ── NAV — fixed independently, always above scrolling sections ── */
-.hero-nav-wrapper {
-  position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(88%, var(--container-max));
-  z-index: 100;
-  animation: slideDown 0.9s var(--ease-out) both;
-}
-
-.hero-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 10px 20px;
-  background: rgba(4, 6, 15, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-pill);
-  backdrop-filter: blur(24px) saturate(1.8);
-  -webkit-backdrop-filter: blur(24px) saturate(1.8);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.nav-logo {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-/* STEP 3: Logo reduced from 68px to 38px to fit inside nav pill */
-.nav-logo-img {
-  height: 38px;
-  width: auto;
-  display: block;
-  object-fit: contain;
-  transition: transform 0.3s var(--ease-out);
-}
-.nav-logo:hover .nav-logo-img {
-  transform: scale(1.03);
-}
-
-/* SHARED BUTTON BASE */
-.nav-cta,
-.cta-primary,
-.cta-ghost,
-.mission-cta,
-.cp-submit {
-  font-family: var(--font-ui);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.22s var(--ease-out);
-}
-
-/* TYPE A — Nav Glass (dark, pill) */
-.nav-cta {
-  font-size: 11px;
-  font-weight: 600;
-  color: #ffffff;
-  padding: 9px 22px;
-  border: 1px solid rgba(255, 255, 255, 0.20);
-  border-radius: var(--radius-pill);
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.06);
-}
-.nav-cta:hover {
-  color: #04060f;
-  border-color: #ffffff;
-  background: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 18px rgba(255, 255, 255, 0.25);
-}
-
-/* ── Hero content ── */
+/* ── Hero content ─────────────────────────────────────────── */
 .hero-content {
   position: relative;
   z-index: 10;
@@ -379,18 +1136,18 @@ body {
 
 .hero-headline {
   font-family: var(--font-display);
-  /* STEP 9: Raised ceiling from 61px to 72px, floor will be fixed in responsive */
-  font-size: clamp(28px, 4.2vw, 72px);
+  font-size: var(--t-display);
   font-weight: 300;
   line-height: 1.05;
-  letter-spacing: 0.01em;
-  color: var(--white);
+  letter-spacing: var(--track-display);
+  color: var(--text-on-inverse);
   text-transform: uppercase;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
 }
+
 .headline-word {
   display: block;
   opacity: 0;
@@ -400,14 +1157,9 @@ body {
 .headline-word:nth-child(2) { animation: fadeUp 0.95s var(--ease-out) 0.46s forwards; }
 .headline-word:nth-child(3) { animation: fadeUp 0.95s var(--ease-out) 0.60s forwards; }
 
-/* STEP 6: Accent word — subtle brightness difference */
-.headline-word--accent {
-  opacity: 0;
-  color: rgba(255,255,255,0.55);
-}
-.headline-word--accent.is-animated {
-  opacity: 1;
-}
+/* Accent word — subtle luminance step-down.
+   Phase 5 raises this for contrast conformance. */
+.headline-word--accent { color: var(--text-on-inverse-accent); }
 
 .hero-cta-row {
   display: flex;
@@ -417,1041 +1169,492 @@ body {
   animation: fadeUp 0.85s var(--ease-out) 1.04s forwards;
 }
 
-/* TYPE B — Outlined (dark context hero CTAs) */
-.cta-primary {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--white);
-  padding: 11px 24px;
-  border: 1px solid rgba(255,255,255,0.28);
-  border-radius: var(--radius-sm);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.cta-primary:hover {
-  border-color: rgba(255,255,255,0.60);
-  background: rgba(255,255,255,0.08);
-  transform: translateY(-1px);
-}
-
-.cta-ghost {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.07em;
-  color: rgba(255,255,255,0.40);
-  padding: 11px 20px;
-  border: none;
-  background: none;
-  border-radius: var(--radius-sm);
-}
-.cta-ghost:hover { color: rgba(255,255,255,0.75); }
-
-/* ── Bottom bar ── */
+/* ── Bottom bar ───────────────────────────────────────────── */
+/* min-height, not height: at <=768px this stacks vertically, and a
+   fixed 40px box put ~68px of content into it, overflowing into the
+   scroll hint. */
 .hero-bar {
   position: absolute;
-  bottom: 0; left: 0; right: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 11;
-  height: 40px;
+  min-height: var(--hero-bar-h);
   display: flex;
   align-items: center;
   padding: 0 var(--px);
-  border-top: 1px solid var(--border-dim);
+  border-top: 1px solid var(--border-hairline-inverse);
   animation: fadeIn 1s var(--ease-out) 1.2s both;
 }
+
 .bar-tag {
-  font-size: 9px;
+  font-size: var(--t-meta);
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--track-eyebrow);
   text-transform: uppercase;
-  color: rgba(255,255,255,0.22);
+  color: var(--text-on-inverse-decor);
   white-space: nowrap;
 }
-.bar-rule { flex: 1; height: 1px; background: var(--border-dim); margin: 0 20px; }
 
-/* ── Scroll hint — centered above hero-bar ── */
+.bar-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--border-hairline-inverse);
+  margin: 0 var(--space-5);
+}
+
+/* ── Scroll hint ──────────────────────────────────────────── */
+/* Offset is derived from the bar's own height token, so the two can
+   never collide when the bar grows. Delay pulled 2.0s -> 1.2s;
+   at 2s most users have already scrolled past it. */
 .hero-scroll-hint {
   position: absolute;
-  bottom: 62px;           /* sits above the 40px hero-bar with gap */
+  bottom: calc(var(--hero-bar-h) + var(--space-6));
   left: 50%;
   transform: translateX(-50%);
   z-index: 11;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
+  gap: var(--space-2);
   opacity: 0;
-  animation: fadeIn 1s var(--ease-out) 2.0s forwards;
+  animation: fadeIn 1s var(--ease-out) 1.2s forwards;
   pointer-events: none;
   user-select: none;
 }
+
 .scroll-arrow-icon {
-  color: rgba(255, 255, 255, 0.42);
-  animation: arrowBounce 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  color: var(--text-on-inverse-hint);
+  animation: arrowBounce 2.2s var(--ease-standard) infinite;
   display: block;
   flex-shrink: 0;
 }
+
 .scroll-label {
   font-family: var(--font-ui);
-  font-size: 9px;
+  font-size: var(--t-meta);
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--track-eyebrow);
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.30);
+  color: var(--text-on-inverse-body);
   white-space: nowrap;
 }
 
-/* ════════════════════════════════════════════════════════
-   ② RETAIL STATEMENT — full-width centered, editorial scale
-   position:relative + z-index:1 → scrolls OVER fixed hero
-════════════════════════════════════════════════════════ */
+/* ── ② RETAIL STATEMENT ───────────────────────────────────── */
+/* Surface: raised. Separates the primary claim from the pure-white
+   mission section further down. */
 .retail-section {
-  background: #ffffff;
-  padding: clamp(72px, 9vw, 128px) var(--px);
-  border-top: 1px solid rgba(0,0,0,0.06);
-  position: relative;
-  z-index: 1;
+  background: var(--surface-raised);
+  padding: var(--section-pad-md) 0;
+  border-top: 1px solid var(--border-hairline);
 }
 
-/* Centered wrapper — generous horizontal margin so text doesn't
-   span fully edge-to-edge, matching the reference composition */
+/* Aligned to the same 1200px grid as every other section, so the
+   left reading edge is continuous down the whole page. */
 .retail-statement-wrap {
-  max-width: 880px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  text-align: center;
+  padding: 0 var(--px);
+  text-align: left;
 }
 
-/* The statement itself — large, centered, charcoal, light weight */
+/* --t-h1: the page's primary claim, and it now outranks the
+   mission H2 instead of sitting below it.
+   Left-aligned to a capped measure: a 40-word sentence centred
+   across five lines has a ragged left edge and no consistent entry
+   point per line, which is the hardest configuration to scan. */
 .retail-statement {
   font-family: var(--font-ui);
-  /* Reduced size by ~50% per request */
-  font-size: clamp(16px, 2.4vw, 34px);
+  font-size: var(--t-h1);
   font-weight: 400;
-  line-height: 1.4;
-  letter-spacing: -0.01em;
-  color: #2e2e2e;
+  line-height: 1.32;
+  letter-spacing: var(--track-snug);
+  color: var(--text-body);
+  max-width: var(--container-text);
   margin: 0;
-
-  /* Fade-down animation setup */
-  opacity: 0;
-  transform: translateY(-24px);
-  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
+  text-wrap: pretty;
 }
 
-.retail-statement-wrap.is-visible .retail-statement {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@media (max-width: 768px) {
-  .retail-statement-wrap {
-    max-width: 100%;
-  }
-  .retail-statement {
-    font-size: clamp(15px, 3.5vw, 24px);
-  }
-}
-
-@media (max-width: 480px) {
-  .retail-statement {
-    font-size: clamp(14px, 4vw, 18px);
-    letter-spacing: 0;
-  }
-}
-
-
-/* ════════════════════════════════════════════════════════
-   ③ VIDEO — PRODUCT OVERVIEW
-   position:relative + z-index:1 → scrolls OVER fixed hero
-════════════════════════════════════════════════════════ */
+/* ── ③ PRODUCT OVERVIEW ───────────────────────────────────── */
 .how-bridge {
-  background: var(--color-light-mid-bg);
+  background: var(--surface-sunken);
   padding: var(--section-pad-md) 0;
-  border-top: 1px solid rgba(0,0,0,0.06);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  position: relative;
-  z-index: 1;
+  border-top: 1px solid var(--border-hairline);
+  border-bottom: 1px solid var(--border-hairline);
 }
 
-/* STEP 5: Eyebrow label above video — same pattern as retail eyebrow */
 .how-bridge .section-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: var(--space-7);
 }
 
-.how-eyebrow {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--light-dim);
-  text-align: center;
-}
+.how-bridge .section-eyebrow { text-align: center; }
 
-/* STEP 5: Video wrapper — radius from 28px to --radius-card (16px); no hover lift */
-.how-video-wrap {
-  width: 100%;
-  border-radius: var(--radius-card);
-  background: var(--color-dark-bg);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 24px 48px -12px rgba(4, 6, 15, 0.20), 0 0 0 1px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  /* No hover transform — removing instability on large container */
-}
-
-.how-video-player {
-  width: 100%;
-  height: auto;
-  max-height: 80vh;
-  object-fit: contain;
-  display: block;
-  border-radius: var(--radius-card);
-  outline: none;
-  background: var(--color-dark-bg);
-}
-
-/* ════════════════════════════════════════════════════════
-   ④ MISSION SECTION
-   position:relative + z-index:1 → scrolls OVER fixed hero
-════════════════════════════════════════════════════════ */
+/* ── ④ MISSION ────────────────────────────────────────────── */
+/* Surface: canvas — the brightest step, for the human argument. */
 .mission-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: center;
   min-height: 540px;
-  background: var(--color-light-surface);
-  border-top: 1px solid rgba(0,0,0,0.06);
-  position: relative;
-  z-index: 1;
+  background: var(--surface-canvas);
+  border-top: 1px solid var(--border-hairline);
 }
 
 .mission-image-wrap {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 480px;
-  background: var(--color-light-bg); /* Light gray surrounding */
+  min-height: 420px;
+  background: var(--surface-frame);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px; /* Reduced padding slightly */
+  padding: var(--space-10);
 }
 
-/* The new inner box container */
+/* 16/9 matches mission.png's native 640x360. v2.0 forced 4/3 with
+   object-fit:cover, which cropped ~25% of the width AND upscaled
+   the remainder ~1.33x — the source was being both trimmed and
+   softened by its own container. */
 .mission-image-container {
   width: 100%;
-  aspect-ratio: 4 / 3; /* Forces a perfect landscape rectangle */
+  aspect-ratio: 16 / 9;
   height: auto;
   position: relative;
   border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: 0 12px 36px -8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04);
-  transform: scale(0.98);
-  transition: transform 0.8s var(--ease-out), box-shadow 0.8s ease;
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--dur-slow) var(--ease-standard);
 }
 
+/* Rest scale is 1.0 so the image is pixel-sharp when static.
+   A single transform on hover, not two nested ones. */
 .mission-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
   display: block;
-  opacity: 0.98;
   filter: brightness(0.98) contrast(1.02);
-  transition: transform 1.2s var(--ease-out), filter 0.8s ease;
+  transition: transform var(--dur-slow) var(--ease-out),
+              filter var(--dur-slow) var(--ease-standard);
 }
 
-.mission-image-wrap:hover .mission-image-container {
-  transform: scale(1);
-  box-shadow: 0 24px 48px -12px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
-}
-
+.mission-image-wrap:hover .mission-image-container { box-shadow: var(--shadow-lg); }
 .mission-image-wrap:hover .mission-image {
   transform: scale(1.03);
   filter: brightness(1) contrast(1.05);
 }
 
-/* STEP 6: Left-align card, anchor to left/top — was center */
 .mission-card {
-  background: var(--color-light-surface);
+  background: var(--surface-canvas);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   text-align: left;
   padding: clamp(56px, 8vw, 96px) clamp(40px, 8%, 80px);
-  gap: 24px;
-  border-left: 1px solid var(--light-border);
+  gap: var(--space-6);
+  border-left: 1px solid var(--border-hairline);
 }
 
-/* STEP 6: H2 weight unified to 500 (was 600) */
 .mission-headline {
   font-family: var(--font-ui);
-  font-size: clamp(22px, 2.8vw, 40px);
+  font-size: var(--t-h2);
   font-weight: 500;
   line-height: 1.18;
-  letter-spacing: -0.02em;
-  color: var(--color-light-text);
+  letter-spacing: var(--track-tight);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .mission-body {
   font-family: var(--font-ui);
-  font-size: clamp(13px, 1.05vw, 15px);
+  font-size: var(--t-body);
   font-weight: 400;
   line-height: 1.72;
-  color: var(--color-light-body);
-  max-width: 380px;
+  color: var(--text-secondary);
+  max-width: 46ch;
   margin: 0;
 }
 
-/* STEP 6: Mission CTA — border-radius applied (was implicit 0) */
-.mission-cta {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-light-text);
-  padding: 11px 24px;
-  border: 1px solid rgba(0,0,0,0.22);
-  border-radius: var(--radius-sm);
-  display: inline-block;
-  margin-top: 8px;
-  transition: border-color var(--dur-mid) ease, background var(--dur-mid) ease, color var(--dur-mid) ease, transform var(--dur-fast) ease;
-}
-.mission-cta:hover {
-  border-color: var(--color-light-text);
-  background: var(--color-light-text);
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-/* ════════════════════════════════════════════════════════
-   PRE-FOOTER CTA SECTION
-════════════════════════════════════════════════════════ */
+/* ── ⑤ DEMO CTA ───────────────────────────────────────────── */
+/* Surface: raised. Full section padding on all sides so the
+   conversion moment reads as its own beat instead of trailing off
+   the mission section on 24px of top padding. */
 .demo-cta-section {
-  background: var(--color-light-surface);
-  padding: 24px var(--px) var(--section-pad-md);
+  background: var(--surface-raised);
+  padding: var(--section-pad-md) var(--px);
+  border-top: 1px solid var(--border-hairline);
   display: flex;
   justify-content: center;
-  position: relative;
-  z-index: 1;
 }
 
 .demo-cta-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: var(--space-6);
   text-align: center;
   width: 100%;
 }
 
-.demo-cta-headline {
+
+/* ═══════════════════════════════════════════════════════════════
+   13 · PAGE · ARTICLE  (explore-platform.html)
+═══════════════════════════════════════════════════════════════ */
+.page-light {
+  background: var(--surface-frame);
+  color: var(--text-body);
   font-family: var(--font-ui);
-  font-size: clamp(20px, 2.5vw, 32px);
-  font-weight: 500;
-  color: var(--color-light-text);
-  margin: 0;
 }
 
-.cta-demo-button {
-  background: #e5e5e5;
-  color: #000000;
-  font-family: var(--font-ui);
-  font-size: 13px;
+/* Reading position for a ~1,400-word document. Transform-only, so
+   it is free to animate. */
+.read-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  z-index: 101;
+  background: var(--text-primary);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+.article-container {
+  max-width: var(--container-prose);
+  margin: 0 auto;
+  padding: calc(var(--nav-h) + var(--section-pad-md)) var(--px) var(--section-pad-md);
+}
+
+/* Page title. The document previously started at <h2> with no
+   <h1> anywhere. */
+.article-content h1 {
+  font-family: var(--font-display);
+  font-size: var(--t-h1);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: var(--track-tight);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-8);
+  text-wrap: balance;
+}
+
+/* Section heads. A hairline above each establishes the rhythm that
+   nine identical fixed-24px headings could not. */
+.article-content h2 {
+  font-family: var(--font-display);
+  font-size: var(--t-h4);
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 14px 40px;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--dur-mid) ease, transform var(--dur-mid) ease;
+  line-height: 1.3;
+  color: var(--text-primary);
+  margin-top: var(--space-16);
+  margin-bottom: var(--space-5);
+  padding-top: var(--space-6);
+  letter-spacing: var(--track-snug);
+  border-top: 1px solid var(--border-hairline);
 }
 
-.cta-demo-button:hover {
-  background: #d0d0d0;
-  transform: translateY(-2px);
-}
-
-/* ════════════════════════════════════════════════════════
-   ⑤ FOOTER
-   position:relative + z-index:1 → scrolls OVER fixed hero
-════════════════════════════════════════════════════════ */
-.site-footer {
-  background: var(--color-dark-footer);
-  border-top: 1px solid rgba(255,255,255,0.06);
+/* De-inlined from a style attribute on <footer>. */
+.article-footer {
+  text-align: center;
+  padding: var(--section-pad-sm) var(--px);
+  background: var(--surface-canvas);
+  border-top: 1px solid var(--border-hairline);
   font-family: var(--font-ui);
-  color: var(--white);
-  position: relative;
-  z-index: 1;
 }
+.article-footer .footer-copy { color: var(--text-secondary); }
 
-.footer-top {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: clamp(24px, 3vw, 48px);
-  padding: var(--section-pad-md) var(--px) var(--section-pad-sm);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+.article-content p {
+  font-size: var(--t-body-lg);
+  line-height: 1.72;
+  color: var(--text-body);
+  max-width: 68ch;
+  margin-bottom: var(--space-6);
 }
+.article-content p:last-child { margin-bottom: 0; }
 
-.footer-col--brand {
+
+/* ═══════════════════════════════════════════════════════════════
+   14 · PAGE · CAREERS
+   Relocated from an inline <style> block in careers.html, which
+   referenced --color-bg and --font-body — neither of which existed,
+   leaving white text on a transparent (white) canvas.
+═══════════════════════════════════════════════════════════════ */
+.page-inverse {
+  background: var(--surface-inverse);
+  color: var(--text-on-inverse);
+  font-family: var(--font-ui);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-right: 48px;
+  min-height: 100vh;
 }
 
-/* Footer logo increased 2x (from 42px to 84px) */
-.footer-logo-img {
-  height: 84px;
-  width: auto;
-  display: block;
-  object-fit: contain;
-  margin-bottom: 2px;
-  margin-left: -4px;
+.careers-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--section-pad-md) var(--px);
+  padding-top: calc(var(--nav-h) + var(--section-pad-md));
 }
 
-.footer-tagline {
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.65;
-  color: rgba(255,255,255,0.35);
-  margin: 0;
-  /* Shift text to align with the "OPSIB" text in the logo (bypassing the icon) */
-  padding-left: 92px;
-}
-
-/* STEP 7: Footer address raised from 9.5px to 11px */
-.footer-address {
-  font-size: 11px;
+.careers-title {
+  font-family: var(--font-display);
+  font-size: var(--t-h1);
   font-weight: 500;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.20);
-  line-height: 1.8;
+  letter-spacing: var(--track-tight);
+  line-height: 1.12;
+  color: var(--text-on-inverse);
+  max-width: 20ch;
+  margin: 0 0 var(--space-6);
+  text-wrap: balance;
+}
+
+.careers-subtitle {
+  font-size: var(--t-body-lg);
+  line-height: 1.7;
+  color: var(--text-on-inverse-body);
   margin: 0;
-  margin-top: 4px;
 }
 
-.footer-col {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.careers-email {
+  color: var(--text-on-inverse);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
+.careers-email:hover { opacity: 0.72; }
 
-.footer-col-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.20em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.30);
-  margin: 0;
-  padding-bottom: 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
 
-.footer-links {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* STEP 7: Footer link hover — opacity transition only, removed translateX */
-.footer-link,
-.footer-static-text {
-  font-size: 13px;
-  font-weight: 400;
-  color: rgba(255,255,255,0.48);
-  letter-spacing: 0.01em;
-  display: inline-block;
-}
-.footer-link {
-  transition: color var(--dur-fast) ease;
-  cursor: pointer;
-}
-.footer-link:hover { color: var(--white); }
-.footer-static-text { cursor: default; }
-
-.footer-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22px var(--px);
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.footer-copy {
-  font-size: 11px;
-  font-weight: 400;
-  color: rgba(255,255,255,0.20);
-  letter-spacing: 0.04em;
-}
-
-.footer-legal {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  flex-wrap: wrap;
-}
-
-.footer-legal-link {
-  font-size: 11px;
-  font-weight: 400;
-  color: rgba(255,255,255,0.28);
-  letter-spacing: 0.03em;
-  transition: color var(--dur-fast) ease;
-}
-.footer-legal-link:hover { color: rgba(255,255,255,0.65); }
-
-/* ════════════════════════════════════════════════════════
-   KEYFRAMES
-════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   15 · KEYFRAMES
+═══════════════════════════════════════════════════════════════ */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(26px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
 @keyframes slideDown {
   from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
-/* Gentle vertical bounce for scroll arrow */
+
 @keyframes arrowBounce {
   0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(7px); }
+  50%      { transform: translateY(7px); }
 }
 
-/* ════════════════════════════════════════════════════════
-   RESPONSIVE
-════════════════════════════════════════════════════════ */
-@media (max-width: 1100px) {
+
+/* ═══════════════════════════════════════════════════════════════
+   16 · RESPONSIVE
+
+   Five breakpoints. Each declared EXACTLY ONCE, widest → narrowest.
+   Do not add @media blocks anywhere else in this file.
+
+     1280  xl · large desktop
+     1080  lg · laptop            (replaces 1100 + 1024)
+      860  md · tablet landscape
+      768  sm · tablet portrait   (replaces 768 × 3 + 640)
+      520  xs · phone             (replaces 540 + 520 + 480)
+═══════════════════════════════════════════════════════════════ */
+
+/* ── 1080 · LAPTOP ────────────────────────────────────────── */
+@media (max-width: 1080px) {
   .hero-nav-wrapper { width: min(90%, 960px); }
-  .footer-top { grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
-  .footer-col--brand { grid-column: 1 / -1; padding-right: 0; flex-direction: row; flex-wrap: wrap; gap: 32px; }
-}
 
-@media (max-width: 768px) {
-  .hero-nav-wrapper { width: 92%; }
-  .hero-content { gap: 24px; }
-
-  [data-pos=ml1],
-  [data-pos=bl2],
-  [data-pos=br1] { display: none; }
-
-  .mission-section { grid-template-columns: 1fr; }
-  /* STEP 9: min-height instead of fixed height */
-  .mission-image-wrap { min-height: 280px; height: auto; }
-  .mission-card { border-left: none; border-top: 1px solid var(--light-border); }
-
-  .footer-top { grid-template-columns: 1fr 1fr; padding: var(--section-pad-sm) var(--px) var(--space-lg); }
-  .footer-col--brand { grid-column: 1 / -1; flex-direction: column; gap: 16px; }
-}
-
-/* STEP 9: Mobile hero headline floor raised from 17px to 28px */
-@media (max-width: 520px) {
-  .hero-headline { font-size: clamp(28px, 9vw, 52px); }
-  .hero-cta-row { flex-direction: column; width: 100%; gap: 10px; }
-  .cta-primary, .cta-ghost { width: 100%; justify-content: center; text-align: center; }
-
-  .footer-top { grid-template-columns: 1fr; }
-  .footer-bottom { flex-direction: column; align-items: flex-start; }
-  .footer-legal { gap: 14px; }
-}
-
-/* ══════════════════════════════════════════════
-   CONTACT PANEL
-══════════════════════════════════════════════ */
-
-/* Dark overlay */
-.contact-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(4, 6, 15, 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 900;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s var(--ease-out);
-}
-.contact-overlay.is-open {
-  opacity: 1;
-  pointer-events: all;
-}
-
-/* The panel */
-.contact-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: min(520px, 100vw);
-  height: 100dvh;
-  background: var(--color-light-surface);
-  z-index: 901;
-  display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.5s var(--ease-out);
-  box-shadow: -8px 0 40px rgba(0,0,0,0.18);
-  overflow: hidden;
-}
-.contact-panel.is-open {
-  transform: translateX(0);
-}
-
-/* Panel header */
-.cp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 28px;
-  border-bottom: 1px solid rgba(0,0,0,0.07);
-  flex-shrink: 0;
-  gap: 12px;
-}
-
-.cp-label-header {
-  font-family: var(--font-ui);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.40);
-  user-select: none;
-}
-
-.cp-close {
-  width: 32px;
-  height: 32px;
-  border: 1px solid rgba(0,0,0,0.12);
-  border-radius: var(--radius-sm);
-  background: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(0,0,0,0.50);
-  flex-shrink: 0;
-  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-.cp-close:hover {
-  color: #000000;
-  border-color: rgba(0,0,0,0.30);
-  background: rgba(0,0,0,0.04);
-}
-
-/* Scrollable body */
-.cp-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 36px 28px 48px;
-  scroll-behavior: smooth;
-}
-.cp-body::-webkit-scrollbar { width: 4px; }
-.cp-body::-webkit-scrollbar-track { background: transparent; }
-.cp-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
-
-/* Headline */
-.cp-headline {
-  font-family: var(--font-ui);
-  font-size: clamp(20px, 2.5vw, 28px);
-  font-weight: 500;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  color: var(--color-light-text);
-  margin: 0 0 36px;
-}
-.cp-headline em {
-  font-style: italic;
-  font-weight: 600;
-}
-
-/* Form */
-.cp-form {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.cp-row--2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.cp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cp-label {
-  font-family: var(--font-ui);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(0,0,0,0.45);
-  line-height: 1;
-}
-.cp-req { color: #cc0000; }
-
-.cp-input {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--color-light-text);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(0,0,0,0.15);
-  padding: 8px 0;
-  outline: none;
-  border-radius: 0;
-  width: 100%;
-  transition: border-color 0.2s ease;
-  -webkit-appearance: none;
-  appearance: none;
-}
-.cp-input:focus {
-  border-bottom-color: #000000;
-}
-.cp-input::placeholder { color: rgba(0,0,0,0.20); }
-
-.cp-select {
-  background-image: url(data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E);
-  background-repeat: no-repeat;
-  background-position: right 2px center;
-  padding-right: 20px;
-  cursor: pointer;
-}
-
-.cp-textarea {
-  resize: vertical;
-  min-height: 88px;
-  line-height: 1.55;
-  border: 1px solid rgba(0,0,0,0.12);
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-}
-.cp-textarea:focus { border-color: #000000; }
-
-.cp-status {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  line-height: 1.5;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  margin-top: 4px;
-}
-.cp-status--success {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-.cp-status--error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-/* STEP 8: CP submit button — border-radius applied */
-.cp-submit {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #ffffff;
-  background: var(--color-light-text);
-  border: 1px solid var(--color-light-text);
-  border-radius: var(--radius-sm);
-  padding: 13px 28px;
-  cursor: pointer;
-  align-self: flex-start;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
-  margin-top: 4px;
-}
-.cp-submit:hover {
-  background: #2a2a2a;
-  transform: translateY(-1px);
-}
-
-.cp-privacy {
-  font-size: 11px;
-  color: rgba(0,0,0,0.35);
-  line-height: 1.6;
-  margin-top: 4px;
-}
-.cp-privacy-link {
-  color: rgba(0,0,0,0.55);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.cp-privacy-link:hover { color: rgba(0,0,0,0.8); }
-
-/* ════════════════════════════════════════════════════════
-   EXPLORE PLATFORM / CONTENT PAGE (LIGHT THEME)
-════════════════════════════════════════════════════════ */
-.page-light {
-  background: var(--color-light-bg);
-  color: #1a1a1a;
-  font-family: var(--font-body);
-}
-
-.page-light .nav {
-  background: rgba(246, 246, 243, 0.85);
-  border-bottom: 1px solid rgba(0,0,0,0.08);
-}
-.page-light .nav-logo { filter: invert(1); }
-.page-light .nav-link { color: rgba(0,0,0,0.6); }
-.page-light .nav-link:hover { color: #000; }
-.page-light .nav-contact { border-color: rgba(0,0,0,0.2); color: #000; }
-.page-light .nav-contact:hover { background: rgba(0,0,0,0.05); }
-
-.article-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 140px 24px 80px;
-}
-
-.article-header {
-  margin-bottom: 64px;
-  text-align: center;
-}
-.article-title {
-  font-family: var(--font-display);
-  font-size: clamp(32px, 5vw, 48px);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: #000;
-  margin-bottom: 16px;
-}
-.article-subtitle {
-  font-family: var(--font-ui);
-  font-size: 16px;
-  color: rgba(0,0,0,0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.article-content h2 {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 600;
-  color: #000;
-  margin-top: 64px;
-  margin-bottom: 24px;
-  letter-spacing: -0.01em;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-}
-
-.article-content h3 {
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(0,0,0,0.7);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-top: 40px;
-  margin-bottom: 16px;
-}
-
-.article-content p {
-  font-size: 16px;
-  line-height: 1.7;
-  color: #333;
-  margin-bottom: 24px;
-}
-
-.article-content ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 32px 0;
-}
-.article-content li {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #333;
-  margin-bottom: 12px;
-  padding-left: 20px;
-  position: relative;
-}
-.article-content li::before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  color: rgba(0,0,0,0.3);
-}
-
-.article-content strong {
-  font-weight: 600;
-  color: #000;
-}
-
-.article-flow {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  background: rgba(0,0,0,0.04);
-  padding: 24px;
-  border-radius: var(--radius-sm);
-  margin: 32px 0;
-  line-height: 1.8;
-  color: #111;
-  border: 1px solid rgba(0,0,0,0.05);
-}
-
-/* Table styling */
-.article-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 48px 0;
-  background: #fff;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.06);
-}
-.article-table th {
-  background: #111;
-  color: #fff;
-  text-align: left;
-  padding: 16px 20px;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-.article-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  font-size: 14px;
-  color: #333;
-  line-height: 1.5;
-}
-.article-table tr:last-child td { border-bottom: none; }
-.article-table td:first-child {
-  font-weight: 600;
-  color: #000;
-  width: 30%;
-}
-
-/* ════════════════════════════════════════════════════════
-   RESPONSIVE DESIGN (TABLET & MOBILE)
-════════════════════════════════════════════════════════ */
-
-/* TABLET (max-width: 1024px) */
-@media (max-width: 1024px) {
-  /* Mission */
-  .mission-section { 
-    grid-template-columns: 1fr; 
+  .footer-top { grid-template-columns: repeat(3, 1fr); gap: var(--space-8); }
+  .footer-col--brand {
+    grid-column: 1 / -1;
+    padding-right: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-8);
   }
-  .mission-image-wrap { min-height: 400px; padding: 24px; }
-  .mission-card { align-items: center; text-align: center; border-left: none; border-top: 1px solid var(--light-border); }
-  
-  /* Footer */
-  .footer-top { grid-template-columns: 1fr 1fr; gap: 40px; }
 }
 
-/* MOBILE (max-width: 768px) */
+/* ── 860 · TABLET LANDSCAPE ───────────────────────────────── */
+@media (max-width: 860px) {
+  .mission-section     { grid-template-columns: 1fr; }
+  .mission-image-wrap  { min-height: 400px; padding: var(--space-6); }
+  /* Left alignment is preserved at every breakpoint. */
+  .mission-card {
+    border-left: none;
+    border-top: 1px solid var(--border-hairline);
+  }
+
+  .footer-top { grid-template-columns: 1fr 1fr; gap: var(--space-10); }
+}
+
+/* ── 768 · TABLET PORTRAIT ────────────────────────────────── */
 @media (max-width: 768px) {
   :root {
-    --px: 20px;
-    --section-pad-lg: 64px;
+    --px:             20px;
     --section-pad-md: 48px;
     --section-pad-sm: 40px;
+    /* Nav logo stays proportional instead of collapsing 38 -> 18px
+       while the pill's padding grew. */
+    --logo-h-nav:     26px;
+    --logo-h-footer:  40px;
+    --nav-pad-y:      12px;
+    --nav-pad-x:      16px;
+    /* Bar stacks here, so the scroll-hint offset follows it. */
+    --hero-bar-h:     76px;
   }
-  
-  /* Nav */
-  .hero-nav { padding: 16px var(--px); }
-  .nav-logo-img { height: 18px; }
-  .nav-cta { padding: 8px 16px; font-size: 11px; }
 
-  /* Hero */
-  .hero-headline { font-size: clamp(28px, 8vw, 40px); margin-bottom: 24px; }
-  .hero-cta-row { flex-direction: column; width: 100%; max-width: 320px; gap: 12px; }
-  .cta-primary, .cta-ghost { width: 100%; justify-content: center; text-align: center; }
-  .hero-meta { display: none; }
-  .hero-bar { flex-direction: column; padding: 16px; text-align: center; gap: 8px; }
-  .bar-rule { display: none; }
-  
-  /* Footer */
-  .footer-top { grid-template-columns: 1fr; gap: 32px; }
-  .footer-col--brand { padding-right: 0; align-items: center; text-align: center; }
-  .footer-logo-img { margin-left: 0; }
-  .footer-tagline, .footer-address { padding-left: 0; }
-  .footer-col { align-items: center; text-align: center; }
-  .footer-bottom { flex-direction: column; text-align: center; gap: 12px; justify-content: center; }
-  .footer-legal { justify-content: center; }
-  
-  /* Article Table (Explore Platform) */
-  .article-table, .article-table tbody, .article-table tr, .article-table th, .article-table td {
-    display: block; width: 100%;
+  .hero-nav-wrapper { width: 92%; }
+  .btn--glass       { padding: var(--space-2) var(--space-4); }
+
+  /* No font-size overrides for --t-display / --t-h1: both are a
+     single monotonic clamp. See §01. */
+  .hero-content  { gap: var(--space-6); }
+  .hero-cta-row  { flex-direction: column; width: 100%; max-width: 320px; gap: var(--space-3); }
+  .hero-cta-row .btn { width: 100%; }
+  .hero-meta     { display: none; }
+  .hero-bar      { flex-direction: column; justify-content: center; padding: var(--space-4); text-align: center; gap: var(--space-2); }
+  .bar-rule      { display: none; }
+
+  .mission-image-wrap { min-height: 280px; padding: var(--space-5); }
+
+  .footer-top {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+    padding: var(--section-pad-sm) var(--px) var(--space-16);
   }
-  .article-table th { display: none; }
-  .article-table td { text-align: left; padding: 12px 16px; }
-  .article-table td:first-child { background: #f9f9f9; padding-top: 16px; border-bottom: none; font-size: 15px; }
+  .footer-col--brand {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-4);
+  }
+  .footer-col      { align-items: center; text-align: center; }
+  .footer-bottom   { flex-direction: column; text-align: center; gap: var(--space-3); justify-content: center; }
+  .footer-legal    { justify-content: center; }
+
+  .btn--lg { padding: var(--space-4) var(--space-7); }
+  .nav     { height: 56px; }
 }
 
-/* Panel responsive */
-@media (max-width: 540px) {
+/* ── 520 · PHONE ──────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .footer-legal { gap: var(--space-3); }
+
   .contact-panel { width: 100vw; }
-  .cp-row--2 { grid-template-columns: 1fr; }
-  .cp-body { padding: 28px 20px 40px; }
-  .cp-header { padding: 16px 20px; }
-}
-
-/* ══════════════════════════════════════════════
-   NEW DEMO CTA BUTTON
-══════════════════════════════════════════════ */
-.cta-demo-new {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  background-color: #dfdfdf;
-  color: #1a1a1a;
-  padding: 16px 24px;
-  border: none;
-  border-radius: 4px;
-  font-family: 'Jost', sans-serif;
-  font-size: 24px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background-color 0.2s, transform 0.2s;
-}
-
-.cta-demo-new:hover {
-  background-color: #d0d0d0;
-  transform: translateY(-2px);
-}
-
-.cta-demo-new-text {
-  letter-spacing: -0.01em;
-}
-
-.cta-demo-new-arrow {
-  display: flex;
-  align-items: center;
-  color: #1a1a1a;
-}
-
-@media (max-width: 768px) {
-  .cta-demo-new {
-    font-size: 20px;
-    padding: 14px 20px;
-    border-radius: 4px;
-  }
+  .cp-row--2     { grid-template-columns: 1fr; }
+  .cp-body       { padding: var(--space-7) var(--space-5) var(--space-10); }
+  .cp-header     { padding: var(--space-4) var(--space-5); }
 }
