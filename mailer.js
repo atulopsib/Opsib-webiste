@@ -132,6 +132,28 @@ function isSenderRejection(error) {
   );
 }
 
+/**
+ * Resolve an SMTP host to a literal IPv4 address.
+ *
+ * Setting `family: 4` or a custom `lookup` on the transport did not
+ * stop production connecting over IPv6 (ENETUNREACH against
+ * 2a00:1450:...), so the host is resolved here and the literal
+ * address is handed to the transport. `tls.servername` then carries
+ * the original hostname so SNI and certificate validation still work
+ * against the real name rather than the IP.
+ */
+async function resolveHostIPv4(host) {
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
+  try {
+    const addresses = await dns.promises.resolve4(host);
+    if (addresses && addresses.length) return addresses[0];
+  } catch (error) {
+    console.warn('[MAILER] IPv4 lookup for ' + host + ' failed (' + error.message +
+                 '); falling back to the hostname.');
+  }
+  return host;
+}
+
 function getTransporter() {
   if (transporterBuilt) return cachedTransporter;
   transporterBuilt = true;
@@ -176,16 +198,7 @@ function getTransporter() {
     port,
     secure,
     auth: { user, pass },
-    // Force IPv4. Container platforms commonly have no IPv6 route,
-    // while DNS still returns an AAAA record for smtp.gmail.com
-    // first, producing:
-    //   connect ENETUNREACH 2a00:1450:4025:401::6d:587
-    // Observed in production on Railway; harmless locally.
     family: 4,
-    // Explicit resolver, so IPv4 is guaranteed even if the transport
-    // does not forward `family` to the socket on this version.
-    lookup: (hostname, options, callback) =>
-      dns.lookup(hostname, { ...options, family: 4 }, callback),
     pool: true,
     maxConnections: 3,
     connectionTimeout: 15000,
@@ -200,11 +213,62 @@ function getTransporter() {
 }
 
 /**
- * Probe SMTP at startup so a broken mail setup is obvious in the
- * boot logs rather than discovered by a lost lead.
+ * Rebuild the transport against a literal IPv4 address. Called when a
+ * connection attempt fails with a routing error.
  */
+async function pinTransportToIPv4() {
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+  const user = process.env.SMTP_USER;
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
+  if (!user || !pass) return null;
+
+  const ip = await resolveHostIPv4(host);
+  if (ip === host) return cachedTransporter;
+
+  console.log('[MAILER] Pinning SMTP to IPv4 ' + ip + ' for ' + host + '.');
+
+  cachedTransporter = nodemailer.createTransport({
+    host: ip,
+    port,
+    secure,
+    auth: { user, pass },
+    name: host,
+    tls: { servername: host },
+    pool: true,
+    maxConnections: 3,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 25000
+  });
+
+  return cachedTransporter;
+}
+
 async function verifyMailer() {
-  const transporter = getTransporter();
+  let transporter = getTransporter();
+
+  if (transporter) {
+    try {
+      await transporter.verify();
+      mailerState.verified = true;
+      mailerState.lastError = null;
+      console.log('[MAILER] SMTP verified. Notifications: ' + mailerState.from + ' -> ' + mailerState.to);
+      return true;
+    } catch (error) {
+      const routing = /ENETUNREACH|EHOSTUNREACH|EAFNOSUPPORT|ENOTFOUND/i.test(error.message || '');
+      if (routing) {
+        console.warn('[MAILER] Hostname connection failed (' + error.message + '). Retrying pinned to IPv4.');
+        transporter = await pinTransportToIPv4();
+      } else {
+        mailerState.verified = false;
+        mailerState.lastError = error.message;
+        console.error('[MAILER] SMTP verify failed: ' + error.message);
+        return false;
+      }
+    }
+  }
 
   if (!transporter) {
     console.error('══════════════════════════════════════════════════════');
@@ -346,6 +410,23 @@ async function sendLeadNotification(lead) {
       return { ok: true, messageId: info.messageId, from };
     } catch (error) {
       lastError = error;
+
+      // A routing failure is not a sender problem: pin to IPv4 and
+      // retry the same From once.
+      if (/ENETUNREACH|EHOSTUNREACH|EAFNOSUPPORT/i.test(error.message || '')) {
+        console.warn('[MAILER] Routing failure (' + error.message + '). Pinning to IPv4 and retrying.');
+        const pinned = await pinTransportToIPv4();
+        if (pinned) {
+          try {
+            const info = await pinned.sendMail({ ...message, from });
+            console.log('[MAILER] Lead ' + lead.id + ' notified -> ' + mailerState.to + ' as ' + from + ' (id ' + info.messageId + ') via IPv4');
+            return { ok: true, messageId: info.messageId, from };
+          } catch (retryError) {
+            lastError = retryError;
+          }
+        }
+      }
+
       const canRetry = i < attempts.length - 1 && isSenderRejection(error);
       if (canRetry) {
         console.warn('[MAILER] Send as ' + from + ' refused (' + error.message + '). Retrying with the authenticated address.');
