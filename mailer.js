@@ -34,6 +34,8 @@ const mailerState = {
   fallbackFrom: null,
   authUser: null,
   usingFallbackFrom: false,
+  smtpBlocked: false,
+  portProbe: null,
   to: null
 };
 
@@ -213,6 +215,40 @@ function getTransporter() {
 }
 
 /**
+ * Probe raw TCP reachability of the common SMTP ports.
+ *
+ * Distinguishes the three failure modes that all surface as "email
+ * doesn't work":
+ *   open      - reachable, so the fault is auth or protocol
+ *   timeout   - packets silently dropped, i.e. blocked by a firewall.
+ *               Most container platforms block 25/465/587 outbound.
+ *   refused   - nothing listening
+ */
+async function probeSmtpPorts(host) {
+  const net = require('net');
+  const ports = [587, 465, 2525, 25];
+
+  const probe = (port) => new Promise((resolve) => {
+    const socket = new net.Socket();
+    let done = false;
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      socket.destroy();
+      resolve({ port, result });
+    };
+    socket.setTimeout(6000);
+    socket.once('connect', () => finish('open'));
+    socket.once('timeout', () => finish('timeout (blocked)'));
+    socket.once('error', (err) => finish(err.code === 'ECONNREFUSED' ? 'refused' : (err.code || 'error')));
+    socket.connect(port, host);
+  });
+
+  const results = await Promise.all(ports.map(probe));
+  return results.reduce((acc, r) => { acc[r.port] = r.result; return acc; }, {});
+}
+
+/**
  * Rebuild the transport against a literal IPv4 address. Called when a
  * connection attempt fails with a routing error.
  */
@@ -286,6 +322,28 @@ async function verifyMailer() {
   } catch (error) {
     mailerState.verified = false;
     mailerState.lastError = error.message;
+
+    // Work out WHY, so "email doesn't work" becomes actionable.
+    try {
+      const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+      mailerState.portProbe = await probeSmtpPorts(host);
+      console.error('[MAILER] SMTP port reachability for ' + host + ': ' + JSON.stringify(mailerState.portProbe));
+
+      const allBlocked = Object.values(mailerState.portProbe)
+        .every((r) => String(r).startsWith('timeout'));
+      if (allBlocked) {
+        mailerState.smtpBlocked = true;
+        console.error('══════════════════════════════════════════════════════');
+        console.error(' OUTBOUND SMTP IS BLOCKED ON THIS HOST');
+        console.error(' Every SMTP port timed out, which means the platform is');
+        console.error(' dropping the packets. No SMTP setting can fix this.');
+        console.error(' Set RESEND_API_KEY or BREVO_API_KEY to deliver over');
+        console.error(' HTTPS instead, which is never blocked.');
+        console.error('══════════════════════════════════════════════════════');
+      }
+    } catch (probeError) {
+      console.error('[MAILER] Port probe failed: ' + probeError.message);
+    }
     console.error('══════════════════════════════════════════════════════');
     console.error(' MAIL VERIFY FAILED — notifications will likely fail');
     console.error(' ' + error.message);
@@ -352,6 +410,98 @@ function buildText(lead) {
   ].join('\n');
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   HTTP TRANSPORT
+
+   Container platforms routinely block outbound SMTP (25/465/587) to
+   limit spam abuse, which no SMTP setting can work around. An HTTP
+   email API travels over 443 and is never blocked.
+
+   Uses the global fetch built into Node 18+, so this adds no
+   dependency. Enabled by setting RESEND_API_KEY or BREVO_API_KEY.
+═══════════════════════════════════════════════════════════════ */
+function httpProvider() {
+  if (process.env.RESEND_API_KEY) return 'resend';
+  if (process.env.BREVO_API_KEY) return 'brevo';
+  return null;
+}
+
+function splitAddress(value) {
+  const raw = normalizeFromHeader(value) || '';
+  const angled = raw.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
+  if (angled) return { name: angled[1].trim() || undefined, email: angled[2].trim() };
+  return { name: undefined, email: raw.trim() };
+}
+
+async function sendViaHttp(lead) {
+  const provider = httpProvider();
+  if (!provider) return { ok: false, error: 'No HTTP email provider configured.' };
+
+  const from = splitAddress(mailerState.from);
+  const to = splitAddress(mailerState.to);
+  const subject = '[Opsib Lead] ' + (lead.company || 'Unknown') + ' - ' +
+                  (lead.firstname || '') + ' ' + (lead.lastname || '') +
+                  ' (' + (lead.country || '') + ')';
+  const html = buildHtml(lead);
+  const text = buildText(lead);
+  const replyTo = lead.email || undefined;
+
+  try {
+    let response;
+    let messageId;
+
+    if (provider === 'resend') {
+      response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + process.env.RESEND_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: from.name ? from.name + ' <' + from.email + '>' : from.email,
+          to: [to.email],
+          subject,
+          html,
+          text,
+          reply_to: replyTo
+        })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return { ok: false, error: 'Resend ' + response.status + ': ' + (body.message || JSON.stringify(body)) };
+      }
+      messageId = body.id;
+    } else {
+      response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          accept: 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { email: from.email, name: from.name },
+          to: [{ email: to.email }],
+          replyTo: replyTo ? { email: replyTo } : undefined,
+          subject,
+          htmlContent: html,
+          textContent: text
+        })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return { ok: false, error: 'Brevo ' + response.status + ': ' + (body.message || JSON.stringify(body)) };
+      }
+      messageId = body.messageId;
+    }
+
+    console.log('[MAILER] Lead ' + lead.id + ' notified via ' + provider + ' HTTP API (id ' + messageId + ')');
+    return { ok: true, messageId, via: provider };
+  } catch (error) {
+    return { ok: false, error: provider + ' HTTP request failed: ' + error.message };
+  }
+}
+
 /**
  * Send the lead notification.
  * Resolves to { ok, messageId?, error? } and never throws, so the
@@ -359,6 +509,14 @@ function buildText(lead) {
  * rejection.
  */
 async function sendLeadNotification(lead) {
+  // Prefer HTTP when configured: on a platform that blocks SMTP it is
+  // the only path that works, and it is more reliable everywhere else.
+  if (httpProvider()) {
+    const viaHttp = await sendViaHttp(lead);
+    if (viaHttp.ok) return viaHttp;
+    console.warn('[MAILER] HTTP provider failed (' + viaHttp.error + '); trying SMTP.');
+  }
+
   const transporter = getTransporter();
 
   if (!transporter) {
@@ -445,9 +603,12 @@ function getMailerState() {
   return {
     configured: mailerState.configured,
     verified: mailerState.verified,
+    transport: httpProvider() ? ('http:' + httpProvider()) : 'smtp',
     from: mailerState.usingFallbackFrom ? mailerState.fallbackFrom : mailerState.from,
     usingFallbackFrom: mailerState.usingFallbackFrom,
     to: mailerState.to,
+    smtpBlocked: mailerState.smtpBlocked,
+    portProbe: mailerState.portProbe,
     lastError: mailerState.lastError
   };
 }

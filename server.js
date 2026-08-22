@@ -212,9 +212,12 @@ app.get('/api/health', async (req, res) => {
     mail: {
       configured: mail.configured,
       verified: mail.verified,
+      transport: mail.transport,
       sender: mail.from,
       usingFallbackFrom: mail.usingFallbackFrom,
       recipient: mail.to,
+      smtpBlocked: mail.smtpBlocked,
+      portProbe: mail.portProbe,
       lastError: mail.lastError
     },
     timestamp: new Date().toISOString()
