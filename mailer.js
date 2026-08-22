@@ -1,5 +1,15 @@
 require('dotenv').config();
+const dns = require('dns');
 const nodemailer = require('nodemailer');
+
+// Belt and braces with the same call in server.js: this module must
+// prefer IPv4 regardless of require order, because container hosts
+// often advertise AAAA records they cannot actually route.
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {
+  // Not available on older Node; the transport also pins family: 4.
+}
 
 /* ═══════════════════════════════════════════════════════════════
    OPSIB — Lead notification mailer
@@ -141,6 +151,10 @@ function getTransporter() {
     //   connect ENETUNREACH 2a00:1450:4025:401::6d:587
     // Observed in production on Railway; harmless locally.
     family: 4,
+    // Explicit resolver, so IPv4 is guaranteed even if the transport
+    // does not forward `family` to the socket on this version.
+    lookup: (hostname, options, callback) =>
+      dns.lookup(hostname, { ...options, family: 4 }, callback),
     pool: true,
     maxConnections: 3,
     connectionTimeout: 15000,

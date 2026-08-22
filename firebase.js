@@ -36,15 +36,34 @@ function normalizePrivateKey(raw) {
   // Normalise real CRLF.
   key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  // Still flat: rebuild the PEM envelope and re-wrap the body.
-  if (!key.includes('\n')) {
+  const hasBegin = key.includes('-----BEGIN PRIVATE KEY-----');
+  const hasEnd = key.includes('-----END PRIVATE KEY-----');
+
+  // Reconstruct the PEM envelope when it is flat, or when the base64
+  // body survived but the header/footer lines did not.
+  //
+  // Observed in production: a value carrying the full 1624-character
+  // body across 26 lines with both markers stripped. Some dashboards
+  // drop the ----- lines when a multi-line value is pasted. The body
+  // is intact, so re-wrapping it is a deterministic repair rather
+  // than a guess.
+  if (!key.includes('\n') || !hasBegin || !hasEnd) {
     const body = key
-      .replace(/-----BEGIN PRIVATE KEY-----/, '')
-      .replace(/-----END PRIVATE KEY-----/, '')
+      .replace(/-+BEGIN[A-Z ]*PRIVATE KEY-+/g, '')
+      .replace(/-+END[A-Z ]*PRIVATE KEY-+/g, '')
       .replace(/\s+/g, '');
-    const wrapped = body.match(/.{1,64}/g);
-    if (wrapped) {
+
+    // Only rebuild when the remainder really is a plausible key body.
+    // Refusing to guess on junk keeps the failure honest.
+    if (/^[A-Za-z0-9+/=]+$/.test(body) && body.length >= 1000) {
+      const wrapped = body.match(/.{1,64}/g);
       key = '-----BEGIN PRIVATE KEY-----\n' + wrapped.join('\n') + '\n-----END PRIVATE KEY-----\n';
+      if (!hasBegin || !hasEnd) {
+        console.warn('[FIRESTORE] FIREBASE_PRIVATE_KEY was missing its PEM ' +
+                     'header/footer lines; rebuilt them around the ' + body.length +
+                     '-character body. Set the full key including the ' +
+                     '-----BEGIN/END PRIVATE KEY----- lines to avoid relying on this.');
+      }
     }
   }
 
