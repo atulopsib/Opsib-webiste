@@ -1,4 +1,15 @@
 require('dotenv').config();
+
+// Prefer IPv4 for all outbound DNS. Container platforms often lack an
+// IPv6 route while DNS still returns AAAA records first, which surfaces
+// as ENETUNREACH on outbound connections (seen against smtp.gmail.com
+// on Railway). Must run before any network client is constructed.
+try {
+  require('dns').setDefaultResultOrder('ipv4first');
+} catch (e) {
+  // Older Node versions do not expose this; safe to ignore.
+}
+
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
@@ -193,7 +204,7 @@ app.get('/api/health', async (req, res) => {
 
   const healthy = datastore === 'ok';
 
-  res.status(healthy ? 200 : 503).json({
+  const payload = {
     status: healthy ? 'ok' : 'degraded',
     service: 'Opsib API',
     datastore,
@@ -201,11 +212,24 @@ app.get('/api/health', async (req, res) => {
     mail: {
       configured: mail.configured,
       verified: mail.verified,
+      sender: mail.from,
+      usingFallbackFrom: mail.usingFallbackFrom,
       recipient: mail.to,
       lastError: mail.lastError
     },
     timestamp: new Date().toISOString()
-  });
+  };
+
+  // Only when broken, and shape only: lengths and marker presence,
+  // never key material. Makes a bad credential diagnosable without
+  // shell access to the container.
+  if (!healthy) {
+    payload.credentialShape = db.getKeyShape();
+    payload.projectId = process.env.FIREBASE_PROJECT_ID || null;
+    payload.clientEmail = process.env.FIREBASE_CLIENT_EMAIL || null;
+  }
+
+  res.status(healthy ? 200 : 503).json(payload);
 });
 
 // Contact / Demo Request Form Submission Endpoint
@@ -304,8 +328,30 @@ const server = app.listen(PORT, async () => {
   if (!process.env.ADMIN_API_KEY) {
     console.error('[SECURITY] ADMIN_API_KEY is not set — /api/leads will return 404 for everyone.');
   }
+
+  // Actually exercise the credential at boot. init succeeding only
+  // proves the key parsed, not that it authenticates, so without this
+  // a bad credential stays hidden until a real lead is lost.
   if (!db.isReady()) {
-    console.error('[STARTUP] Firestore is NOT available. Submissions will be refused with 503.');
+    console.error('[STARTUP] Firestore did not initialise. Submissions will be refused with 503.');
+  } else {
+    try {
+      await db.ping();
+      console.log('[STARTUP] Firestore credential verified — read succeeded.');
+    } catch (error) {
+      console.error('══════════════════════════════════════════════════════');
+      console.error(' FIRESTORE CREDENTIAL REJECTED — leads CANNOT be saved');
+      console.error(' ' + error.message);
+      if (/UNAUTHENTICATED|invalid.*credential|invalid_grant/i.test(error.message)) {
+        console.error('');
+        console.error(' The key parsed but the service account did not');
+        console.error(' authenticate. Re-copy FIREBASE_PRIVATE_KEY from the');
+        console.error(' service-account JSON into this environment, or issue a');
+        console.error(' new key in the Firebase console. Key shape seen here:');
+        console.error(' ' + JSON.stringify(db.getKeyShape()));
+      }
+      console.error('══════════════════════════════════════════════════════');
+    }
   }
 
   await mailer.verifyMailer();

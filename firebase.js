@@ -8,26 +8,77 @@ if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !p
 let db;
 let initError = 'Firebase Admin SDK has not completed initialization.';
 
-try {
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  if (privateKey) {
-    // Strip accidental surrounding quotes
-    privateKey = privateKey.replace(/^"|"$/g, '');
-    // Convert literal "\n" strings to actual newlines
-    privateKey = privateKey.replace(/\\n/g, '\n');
-    
-    // If the key is totally flat (no newlines), reconstruct the PEM format
-    if (!privateKey.includes('\n')) {
-      privateKey = privateKey.replace(/(-----BEGIN PRIVATE KEY-----)\s*/, '$1\n');
-      privateKey = privateKey.replace(/\s*(-----END PRIVATE KEY-----)/, '\n$1');
-      const startIdx = privateKey.indexOf('\n') + 1;
-      const endIdx = privateKey.lastIndexOf('\n');
-      if (startIdx > 0 && endIdx > startIdx) {
-        let body = privateKey.substring(startIdx, endIdx);
-        body = body.replace(/\s+/g, '\n'); // Convert spaces in base64 to newlines
-        privateKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
-      }
+/**
+ * Normalise a service-account private key across the many shapes it
+ * arrives in. A .env file, a Railway variable pasted from the JSON
+ * key file, and a value pasted with real newlines are all different,
+ * and a subtly wrong key still parses as valid PEM — it then fails
+ * at RPC time with "16 UNAUTHENTICATED" rather than at init, which
+ * makes the cause hard to see.
+ */
+function normalizePrivateKey(raw) {
+  if (!raw) return raw;
+
+  let key = String(raw).trim();
+
+  // Trailing comma left behind when copying a line out of JSON.
+  key = key.replace(/,\s*$/, '');
+
+  // Matching surrounding quotes, single or double.
+  if ((key.startsWith('"') && key.endsWith('"')) ||
+      (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+
+  // Escaped newline sequences -> real newlines.
+  key = key.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\n');
+
+  // Normalise real CRLF.
+  key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Still flat: rebuild the PEM envelope and re-wrap the body.
+  if (!key.includes('\n')) {
+    const body = key
+      .replace(/-----BEGIN PRIVATE KEY-----/, '')
+      .replace(/-----END PRIVATE KEY-----/, '')
+      .replace(/\s+/g, '');
+    const wrapped = body.match(/.{1,64}/g);
+    if (wrapped) {
+      key = '-----BEGIN PRIVATE KEY-----\n' + wrapped.join('\n') + '\n-----END PRIVATE KEY-----\n';
     }
+  }
+
+  if (!key.endsWith('\n')) key += '\n';
+  return key;
+}
+
+/** Shape only — no key material. Safe to log. */
+function describeKey(key) {
+  const k = key || '';
+  const body = k
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\s+/g, '');
+  return {
+    length: k.length,
+    hasBeginMarker: /-----BEGIN PRIVATE KEY-----/.test(k),
+    hasEndMarker: /-----END PRIVATE KEY-----/.test(k),
+    lineCount: k.split('\n').filter(Boolean).length,
+    bodyChars: body.length,
+    bodyIsBase64: /^[A-Za-z0-9+/=]*$/.test(body)
+  };
+}
+
+let keyShape = null;
+
+try {
+  const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+  keyShape = describeKey(privateKey);
+
+  // A well-formed PKCS#8 RSA 2048 key has a body around 1600-1700
+  // base64 characters. Anything far short of that is truncated.
+  if (!keyShape.hasBeginMarker || !keyShape.hasEndMarker || !keyShape.bodyIsBase64 || keyShape.bodyChars < 1000) {
+    console.error('[FIRESTORE] FIREBASE_PRIVATE_KEY looks malformed: ' + JSON.stringify(keyShape));
   }
   
   initializeApp({
@@ -40,7 +91,11 @@ try {
 
   db = getFirestore();
   initError = null;
-  console.log("Firebase Admin SDK initialized successfully.");
+  console.log('Firebase Admin SDK initialized. project=' + process.env.FIREBASE_PROJECT_ID +
+              ' clientEmail=' + process.env.FIREBASE_CLIENT_EMAIL +
+              ' keyShape=' + JSON.stringify(keyShape));
+  console.log('[FIRESTORE] Note: successful init does NOT prove the credential works. ' +
+              'A wrong-but-well-formed key fails later with "16 UNAUTHENTICATED".');
 } catch (error) {
   initError = error.message;
   console.error("══════════════════════════════════════════════════════");
@@ -57,6 +112,11 @@ function isReady() {
 
 function getInitError() {
   return initError;
+}
+
+/** Shape of the configured key. Contains no key material. */
+function getKeyShape() {
+  return keyShape;
 }
 
 /**
@@ -166,6 +226,7 @@ module.exports = {
   getLeads,
   isReady,
   getInitError,
+  getKeyShape,
   markLeadNotified,
   findRecentLeadByEmail,
   ping

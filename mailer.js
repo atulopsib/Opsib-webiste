@@ -135,11 +135,17 @@ function getTransporter() {
     port,
     secure,
     auth: { user, pass },
+    // Force IPv4. Container platforms commonly have no IPv6 route,
+    // while DNS still returns an AAAA record for smtp.gmail.com
+    // first, producing:
+    //   connect ENETUNREACH 2a00:1450:4025:401::6d:587
+    // Observed in production on Railway; harmless locally.
+    family: 4,
     pool: true,
     maxConnections: 3,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 25000
     // TLS certificate validation is left ON. It was previously
     // disabled via rejectUnauthorized:false, which accepts any
     // certificate and exposes the SMTP credentials to interception.
