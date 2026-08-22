@@ -224,9 +224,12 @@ app.get('/api/health', async (req, res) => {
   // never key material. Makes a bad credential diagnosable without
   // shell access to the container.
   if (!healthy) {
+    const identity = db.getResolvedIdentity();
     payload.credentialShape = db.getKeyShape();
-    payload.projectId = process.env.FIREBASE_PROJECT_ID || null;
-    payload.clientEmail = process.env.FIREBASE_CLIENT_EMAIL || null;
+    payload.projectId = identity.projectId;
+    // Both raw and resolved, so a truncated variable is obvious.
+    payload.clientEmailRaw = process.env.FIREBASE_CLIENT_EMAIL || null;
+    payload.clientEmailResolved = identity.clientEmail;
   }
 
   res.status(healthy ? 200 : 503).json(payload);

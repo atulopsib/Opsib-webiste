@@ -69,14 +69,45 @@ function extractAddress(value) {
  * it. See sendWithFromFallback().
  */
 function resolveFrom(user) {
-  const configured = process.env.SMTP_FROM;
+  const configured = normalizeFromHeader(process.env.SMTP_FROM);
   if (!configured) return '"Opsib Leads" <' + user + '>';
   return configured;
 }
 
+/**
+ * Repair a truncated From header.
+ *
+ * Observed in production: SMTP_FROM ended "<leads@opsib.com" with the
+ * closing angle bracket missing, which yields an unparseable address.
+ * Also strips a stray trailing comma or wrapping quotes picked up when
+ * the value is copied out of a config file.
+ */
+function normalizeFromHeader(raw) {
+  if (!raw) return raw;
+
+  let from = String(raw).trim().replace(/,\s*$/, '');
+
+  if ((from.startsWith('"') && from.endsWith('"') && from.indexOf('<') === -1) ||
+      (from.startsWith("'") && from.endsWith("'"))) {
+    from = from.slice(1, -1).trim();
+  }
+
+  const opens = (from.match(/</g) || []).length;
+  const closes = (from.match(/>/g) || []).length;
+
+  if (opens === 1 && closes === 0) {
+    console.warn('[MAILER] SMTP_FROM was truncated ("' + from + '"); appending the ' +
+                 'missing ">". Fix the variable in the environment so this repair ' +
+                 'is not needed.');
+    from += '>';
+  }
+
+  return from;
+}
+
 /** From address to use if the provider refuses the configured one. */
 function fallbackFrom(user) {
-  const configured = process.env.SMTP_FROM;
+  const configured = normalizeFromHeader(process.env.SMTP_FROM);
   const nameMatch = configured && configured.match(/^\s*"?([^"<]*?)"?\s*</);
   const displayName = (nameMatch && nameMatch[1].trim()) || 'Opsib Leads';
   return '"' + displayName.replace(/"/g, '') + '" <' + user + '>';
