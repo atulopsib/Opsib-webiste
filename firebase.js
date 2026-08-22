@@ -6,6 +6,7 @@ if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !p
 }
 
 let db;
+let initError = 'Firebase Admin SDK has not completed initialization.';
 
 try {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -38,9 +39,24 @@ try {
   });
 
   db = getFirestore();
+  initError = null;
   console.log("Firebase Admin SDK initialized successfully.");
 } catch (error) {
-  console.error("Firebase initialization error:", error);
+  initError = error.message;
+  console.error("══════════════════════════════════════════════════════");
+  console.error(" FIRESTORE INIT FAILED — leads CANNOT be saved");
+  console.error(" " + error.message);
+  console.error("══════════════════════════════════════════════════════");
+}
+
+/** True when Firestore is usable. Previously the server booted and
+ *  reported healthy with db undefined, silently losing every lead. */
+function isReady() {
+  return Boolean(db);
+}
+
+function getInitError() {
+  return initError;
 }
 
 /**
@@ -49,8 +65,13 @@ try {
  * @returns {Promise<Object>} - The saved document reference and ID
  */
 async function addLead(leadData) {
+  if (!db) throw new Error('DATASTORE_UNAVAILABLE');
+
   const newLead = {
     ...leadData,
+    // Notification state starts pending so a lead that never got
+    // emailed is identifiable rather than indistinguishable.
+    notification: { status: 'pending', attemptedAt: null, error: null },
     createdAt: FieldValue.serverTimestamp(),
   };
 
@@ -59,22 +80,93 @@ async function addLead(leadData) {
 }
 
 /**
+ * Record whether the notification email actually went out.
+ * Never throws: this runs on a background path and must not take
+ * down the request that scheduled it.
+ */
+async function markLeadNotified(leadId, ok, error) {
+  if (!db || !leadId) return;
+  try {
+    await db.collection('leads').doc(leadId).update({
+      notification: {
+        status: ok ? 'sent' : 'failed',
+        attemptedAt: FieldValue.serverTimestamp(),
+        error: ok ? null : String(error || 'unknown').slice(0, 500)
+      }
+    });
+  } catch (err) {
+    console.error('[FIRESTORE] Could not record notification state for ' + leadId + ': ' + err.message);
+  }
+}
+
+/**
+ * Recent lead by the same email, used for submit de-duplication.
+ *
+ * Deliberately an equality-only query. Adding .orderBy('createdAt')
+ * turns this into a composite query, which Firestore refuses with
+ * FAILED_PRECONDITION until a composite index is built by hand.
+ * Equality filters are served by the automatic single-field index,
+ * so this needs no index configuration. The window comparison is
+ * done in memory over a handful of documents.
+ */
+async function findRecentLeadByEmail(email, windowMs) {
+  if (!db || !email) return null;
+
+  const snap = await db.collection('leads')
+    .where('email', '==', email)
+    .limit(10)
+    .get();
+
+  if (snap.empty) return null;
+
+  const cutoff = Date.now() - windowMs;
+  let newest = null;
+
+  snap.forEach((doc) => {
+    const data = doc.data();
+    const created = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().getTime() : 0;
+    if (created > cutoff && (!newest || created > newest.created)) {
+      newest = { created, lead: { id: doc.id, ...data } };
+    }
+  });
+
+  return newest ? newest.lead : null;
+}
+
+/**
  * Retrieves all leads from Firestore, ordered by creation date
  * @returns {Promise<Array>} - Array of lead objects
  */
-async function getLeads() {
-  const snapshot = await db.collection('leads').orderBy('createdAt', 'desc').get();
-  
+async function getLeads(limit) {
+  if (!db) throw new Error('DATASTORE_UNAVAILABLE');
+
+  let query = db.collection('leads').orderBy('createdAt', 'desc');
+  if (limit && Number.isFinite(limit)) query = query.limit(limit);
+
+  const snapshot = await query.get();
+
   const leads = [];
   snapshot.forEach(doc => {
     leads.push({ id: doc.id, ...doc.data() });
   });
-  
+
   return leads;
+}
+
+/** Lightweight round-trip so /api/health reflects real reachability. */
+async function ping() {
+  if (!db) throw new Error('DATASTORE_UNAVAILABLE');
+  await db.collection('leads').limit(1).get();
+  return true;
 }
 
 module.exports = {
   db,
   addLead,
-  getLeads
+  getLeads,
+  isReady,
+  getInitError,
+  markLeadNotified,
+  findRecentLeadByEmail,
+  ping
 };
