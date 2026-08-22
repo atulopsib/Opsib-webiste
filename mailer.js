@@ -2,13 +2,23 @@ require('dotenv').config();
 const dns = require('dns');
 const nodemailer = require('nodemailer');
 
-// Belt and braces with the same call in server.js: this module must
-// prefer IPv4 regardless of require order, because container hosts
-// often advertise AAAA records they cannot actually route.
-try {
-  dns.setDefaultResultOrder('ipv4first');
-} catch (e) {
-  // Not available on older Node; the transport also pins family: 4.
+// Forcing IPv4 is opt-in via SMTP_FORCE_IPV4=true.
+//
+// It was briefly the default while diagnosing an ENETUNREACH failure,
+// but that turned out to be IPv6 egress being disabled on the host
+// rather than SMTP being blocked. With egress enabled, IPv6 is the
+// faster path, and preferring IPv4 makes every send try the worse
+// route first. Normal DNS ordering is the default; a routing failure
+// still falls back to IPv4 automatically at send time.
+const FORCE_IPV4 = String(process.env.SMTP_FORCE_IPV4 || '').toLowerCase() === 'true';
+
+if (FORCE_IPV4) {
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+    console.log('[MAILER] SMTP_FORCE_IPV4 is set; preferring IPv4 for SMTP.');
+  } catch (e) {
+    // Not available on older Node; the transport also pins family: 4.
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -200,7 +210,7 @@ function getTransporter() {
     port,
     secure,
     auth: { user, pass },
-    family: 4,
+    ...(FORCE_IPV4 ? { family: 4 } : {}),
     pool: true,
     maxConnections: 3,
     connectionTimeout: 15000,

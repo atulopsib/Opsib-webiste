@@ -1,13 +1,16 @@
 require('dotenv').config();
 
-// Prefer IPv4 for all outbound DNS. Container platforms often lack an
-// IPv6 route while DNS still returns AAAA records first, which surfaces
-// as ENETUNREACH on outbound connections (seen against smtp.gmail.com
-// on Railway). Must run before any network client is constructed.
-try {
-  require('dns').setDefaultResultOrder('ipv4first');
-} catch (e) {
-  // Older Node versions do not expose this; safe to ignore.
+// Opt-in IPv4 preference for all outbound DNS, for hosts whose IPv6
+// egress is disabled. Left off by default: when IPv6 egress is
+// available it is the faster path, and forcing IPv4 makes every
+// outbound connection try the worse route first. Must run before any
+// network client is constructed.
+if (String(process.env.SMTP_FORCE_IPV4 || '').toLowerCase() === 'true') {
+  try {
+    require('dns').setDefaultResultOrder('ipv4first');
+  } catch (e) {
+    // Older Node versions do not expose this; safe to ignore.
+  }
 }
 
 const express = require('express');
