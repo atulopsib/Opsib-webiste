@@ -21,6 +21,9 @@ const mailerState = {
   verified: false,
   lastError: null,
   from: null,
+  fallbackFrom: null,
+  authUser: null,
+  usingFallbackFrom: false,
   to: null
 };
 
@@ -49,33 +52,43 @@ function extractAddress(value) {
 /**
  * Resolve the From header.
  *
- * Gmail only permits sending as the authenticated account or one of
- * its verified aliases. SMTP_FROM previously declared
- * notifications@opsib.ai while authenticating as atul@opsib.com,
- * so Gmail rewrote the envelope and the message could fail SPF or
- * DMARC for opsib.ai and be filtered as spam at the receiving end.
+ * A provider will send as the authenticated account or as any of its
+ * verified send-as aliases. Whether a given alias is verified cannot
+ * be determined without attempting a send, so the configured value
+ * is used as-is and only corrected if the provider actually rejects
+ * it. See sendWithFromFallback().
  */
 function resolveFrom(user) {
   const configured = process.env.SMTP_FROM;
-  const configuredAddr = extractAddress(configured);
-  const authAddr = (user || '').trim().toLowerCase();
-
   if (!configured) return '"Opsib Leads" <' + user + '>';
-  if (configuredAddr === authAddr) return configured;
+  return configured;
+}
 
-  // Preserve the intended display name, correct the address.
-  const nameMatch = configured.match(/^\s*"?([^"<]*?)"?\s*</);
+/** From address to use if the provider refuses the configured one. */
+function fallbackFrom(user) {
+  const configured = process.env.SMTP_FROM;
+  const nameMatch = configured && configured.match(/^\s*"?([^"<]*?)"?\s*</);
   const displayName = (nameMatch && nameMatch[1].trim()) || 'Opsib Leads';
-
-  console.warn(
-    '[MAILER] SMTP_FROM address (' + configuredAddr + ') does not match ' +
-    'SMTP_USER (' + authAddr + '). Gmail will not send as an unverified ' +
-    'address. Falling back to "' + displayName + '" <' + user + '>. ' +
-    'To send as ' + configuredAddr + ', add it as a verified alias in the ' +
-    'Gmail account, or set SMTP_FROM to the authenticated address.'
-  );
-
   return '"' + displayName.replace(/"/g, '') + '" <' + user + '>';
+}
+
+/**
+ * True when the SMTP error indicates the sender address was refused,
+ * as opposed to a network, auth or recipient problem.
+ */
+function isSenderRejection(error) {
+  const text = ((error && (error.response || error.message)) || '').toLowerCase();
+  return (
+    text.includes('5.7.0') ||
+    text.includes('5.5.1') ||
+    text.includes('5.7.1') ||
+    text.includes('sender address') ||
+    text.includes('invalid sender') ||
+    text.includes('must equal') ||
+    text.includes('not allowed to send as') ||
+    text.includes('from address') ||
+    text.includes('sender rejected')
+  );
 }
 
 function getTransporter() {
@@ -103,7 +116,19 @@ function getTransporter() {
 
   mailerState.configured = true;
   mailerState.from = resolveFrom(user);
+  mailerState.fallbackFrom = fallbackFrom(user);
+  mailerState.authUser = user;
   mailerState.to = process.env.NOTIFICATION_EMAIL || user;
+
+  const fromAddr = extractAddress(mailerState.from);
+  if (fromAddr !== user.trim().toLowerCase()) {
+    console.log(
+      '[MAILER] Sending as ' + fromAddr + ' while authenticated as ' + user +
+      '. This requires ' + fromAddr + ' to be a verified send-as alias on ' +
+      'that account. If the provider refuses it, the next send falls back ' +
+      'to ' + mailerState.fallbackFrom + ' automatically.'
+    );
+  }
 
   cachedTransporter = nodemailer.createTransport({
     host,
@@ -226,36 +251,70 @@ async function sendLeadNotification(lead) {
     return { ok: false, error: mailerState.lastError };
   }
 
-  try {
-    const info = await transporter.sendMail({
-      from: mailerState.from,
-      to: mailerState.to,
-      // Replying to the notification reaches the prospect directly.
-      replyTo: lead.email ? '"' + String(lead.firstname || '').replace(/"/g, '') + ' ' + String(lead.lastname || '').replace(/"/g, '') + '" <' + lead.email + '>' : undefined,
-      subject: '[Opsib Lead] ' + (lead.company || 'Unknown') + ' - ' + (lead.firstname || '') + ' ' + (lead.lastname || '') + ' (' + (lead.country || '') + ')',
-      text: buildText(lead),
-      html: buildHtml(lead)
-    });
+  const message = {
+    to: mailerState.to,
+    // Replying to the notification reaches the prospect directly.
+    replyTo: lead.email
+      ? '"' + String(lead.firstname || '').replace(/"/g, '') + ' ' + String(lead.lastname || '').replace(/"/g, '') + '" <' + lead.email + '>'
+      : undefined,
+    subject: '[Opsib Lead] ' + (lead.company || 'Unknown') + ' - ' + (lead.firstname || '') + ' ' + (lead.lastname || '') + ' (' + (lead.country || '') + ')',
+    text: buildText(lead),
+    html: buildHtml(lead)
+  };
 
-    if (info.rejected && info.rejected.length) {
-      const err = 'Recipient rejected: ' + info.rejected.join(', ');
-      console.error('[MAILER] ' + err);
-      return { ok: false, error: err };
+  // Prefer the configured From. Only rewrite it if the provider
+  // actually refuses that sender, so a verified alias is respected
+  // and a misconfigured one still self-corrects.
+  const attempts = mailerState.usingFallbackFrom
+    ? [mailerState.fallbackFrom]
+    : [mailerState.from, mailerState.fallbackFrom];
+
+  let lastError = null;
+
+  for (let i = 0; i < attempts.length; i++) {
+    const from = attempts[i];
+    if (!from) continue;
+
+    try {
+      const info = await transporter.sendMail({ ...message, from });
+
+      if (info.rejected && info.rejected.length) {
+        const err = 'Recipient rejected: ' + info.rejected.join(', ');
+        console.error('[MAILER] ' + err);
+        return { ok: false, error: err };
+      }
+
+      if (i > 0) {
+        // Remember the working sender so every later lead skips the
+        // failing attempt instead of paying for it each time.
+        mailerState.usingFallbackFrom = true;
+        console.warn('[MAILER] Sender ' + extractAddress(mailerState.from) + ' was refused; now sending as ' + from + ' for the rest of this process.');
+      }
+
+      console.log('[MAILER] Lead ' + lead.id + ' notified -> ' + mailerState.to + ' as ' + from + ' (id ' + info.messageId + ')');
+      return { ok: true, messageId: info.messageId, from };
+    } catch (error) {
+      lastError = error;
+      const canRetry = i < attempts.length - 1 && isSenderRejection(error);
+      if (canRetry) {
+        console.warn('[MAILER] Send as ' + from + ' refused (' + error.message + '). Retrying with the authenticated address.');
+        continue;
+      }
+      break;
     }
-
-    console.log('[MAILER] Lead ' + lead.id + ' notified -> ' + mailerState.to + ' (id ' + info.messageId + ')');
-    return { ok: true, messageId: info.messageId };
-  } catch (error) {
-    console.error('[MAILER] Lead ' + (lead && lead.id) + ' saved but email FAILED: ' + error.message);
-    return { ok: false, error: error.message };
   }
+
+  const detail = lastError ? lastError.message : 'unknown send failure';
+  console.error('[MAILER] Lead ' + (lead && lead.id) + ' saved but email FAILED: ' + detail);
+  return { ok: false, error: detail };
 }
 
 function getMailerState() {
   return {
     configured: mailerState.configured,
     verified: mailerState.verified,
-    from: mailerState.from,
+    from: mailerState.usingFallbackFrom ? mailerState.fallbackFrom : mailerState.from,
+    usingFallbackFrom: mailerState.usingFallbackFrom,
     to: mailerState.to,
     lastError: mailerState.lastError
   };
