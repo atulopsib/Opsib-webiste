@@ -10,3 +10,7 @@ yarn-debug.log*
 yarn-error.log*
 .idea/
 .vscode/
+
+# Lead exports contain personal data — never commit these
+leads-backup*.json
+leads-export*.json

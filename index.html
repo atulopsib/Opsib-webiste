@@ -337,6 +337,17 @@
         <textarea class="cp-input cp-textarea" id="cp-message" name="message" rows="4"></textarea>
       </div>
 
+      <!-- Bot trap. Hidden from sight, from the tab order and from
+           assistive tech, and excluded from autofill. A human cannot
+           fill it; naive bots fill every input they find. Renders
+           nothing and adds no visible text. -->
+      <div class="cp-trap" aria-hidden="true">
+        <label for="cp-subject-ref">Subject reference</label>
+        <input type="text" id="cp-subject-ref" name="subject_ref" tabindex="-1"
+               autocomplete="off" aria-hidden="true" />
+      </div>
+      <input type="hidden" id="cp-elapsed" name="elapsed_ms" value="" />
+
       <div class="cp-status" id="cp-status" aria-live="polite" hidden></div>
 
       <button class="btn btn--solid cp-submit" type="submit" id="cp-submit">Submit</button>

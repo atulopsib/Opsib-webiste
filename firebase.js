@@ -279,6 +279,52 @@ async function getLeads(limit) {
   return leads;
 }
 
+/**
+ * Store a submission that tripped a bot heuristic.
+ *
+ * Kept in a separate collection rather than discarded, so that if a
+ * heuristic ever misfires on a real prospect the lead is recoverable.
+ * Silently dropping data would be the worse failure.
+ *
+ * Field values are truncated because this path accepts unvalidated
+ * input by definition.
+ */
+async function quarantineSubmission(body, reason, ip, userAgent) {
+  if (!db) throw new Error('DATASTORE_UNAVAILABLE');
+
+  const cap = (v, n) => (v === undefined || v === null ? null : String(v).slice(0, n));
+
+  await db.collection('leads_quarantine').add({
+    reason,
+    ip: cap(ip, 60),
+    userAgent: cap(userAgent, 300),
+    payload: {
+      firstname: cap(body.firstname, 200),
+      lastname: cap(body.lastname, 200),
+      email: cap(body.email, 300),
+      phone: cap(body.phone, 80),
+      jobtitle: cap(body.jobtitle, 200),
+      company: cap(body.company, 300),
+      country: cap(body.country, 120),
+      message: cap(body.message, 2000)
+    },
+    createdAt: FieldValue.serverTimestamp()
+  });
+}
+
+/** Quarantined submissions, for reviewing possible false positives. */
+async function getQuarantined(limit) {
+  if (!db) throw new Error('DATASTORE_UNAVAILABLE');
+
+  let query = db.collection('leads_quarantine').orderBy('createdAt', 'desc');
+  if (limit && Number.isFinite(limit)) query = query.limit(limit);
+
+  const snapshot = await query.get();
+  const items = [];
+  snapshot.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+  return items;
+}
+
 /** Lightweight round-trip so /api/health reflects real reachability. */
 async function ping() {
   if (!db) throw new Error('DATASTORE_UNAVAILABLE');
@@ -296,5 +342,7 @@ module.exports = {
   getResolvedIdentity,
   markLeadNotified,
   findRecentLeadByEmail,
+  quarantineSubmission,
+  getQuarantined,
   ping
 };

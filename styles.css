@@ -903,6 +903,19 @@ body {
 }
 .cp-textarea:focus { border-color: var(--text-primary); }
 
+/* Bot trap. Removed from the visual flow without display:none, which
+   some bots skip. Paired with tabindex="-1" and aria-hidden in the
+   markup, so keyboard and screen-reader users never reach it. */
+.cp-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .cp-status {
   font-family: var(--font-ui);
   font-size: 12px;

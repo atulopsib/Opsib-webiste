@@ -186,8 +186,13 @@
 
   if (panel) panel.inert = true;
 
+  // Timestamp for the server's minimum-fill-time check. Set when the
+  // panel opens, which is the earliest a human could begin typing.
+  let panelOpenedAt = null;
+
   function openPanel(e) {
     lastTrigger = (e && e.currentTarget) || openBtn;
+    panelOpenedAt = Date.now();
     panel.inert = false;
     panel.classList.add('is-open');
     overlay.classList.add('is-open');
@@ -267,7 +272,11 @@
         jobtitle:  document.getElementById('cp-jobtitle')?.value.trim(),
         company:   document.getElementById('cp-company')?.value.trim(),
         country:   document.getElementById('cp-country')?.value,
-        message:   document.getElementById('cp-message')?.value.trim()
+        message:   document.getElementById('cp-message')?.value.trim(),
+        // Bot signals. The trap must stay empty; elapsed time must be
+        // plausible for a human filling eight fields.
+        subject_ref: document.getElementById('cp-subject-ref')?.value || '',
+        elapsed_ms: panelOpenedAt ? (Date.now() - panelOpenedAt) : null
       };
 
       const origBtnText = submitBtn ? submitBtn.textContent : 'Submit';

@@ -27,8 +27,33 @@ const PORT = process.env.PORT || 3000;
 // load balancer. Required for per-IP rate limiting on Railway.
 app.set('trust proxy', 1);
 
-// Middleware
-app.use(cors());
+/* ═══════════════════════════════════════════════════════════════
+   CORS
+
+   Was cors() with no options, which emits
+   Access-Control-Allow-Origin: * and lets any website POST to the
+   form endpoint from a visitor's browser.
+
+   The real form is same-origin, so browsers never apply CORS to it
+   and restricting this cannot break it.
+═══════════════════════════════════════════════════════════════ */
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
+  'https://opsib.com,https://www.opsib.com')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // No Origin header: same-origin request, curl, or server-to-server.
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+
+    console.warn('[CORS] Blocked cross-origin request from ' + origin);
+    // Omit the CORS headers rather than throwing, so the response is
+    // a clean browser-side block instead of a 500.
+    return callback(null, false);
+  }
+}));
 // 100kb (the default) is far more than this form needs and lets a
 // single field carry ~99kb into Firestore.
 app.use(express.json({ limit: '16kb' }));
@@ -157,6 +182,67 @@ const FIELD_LIMITS = {
 
 const REQUIRED = ['firstname', 'lastname', 'email', 'phone', 'jobtitle', 'company', 'country'];
 
+/* ═══════════════════════════════════════════════════════════════
+   BOT DETECTION
+
+   Two cheap, high-yield signals:
+
+   1. Honeypot — a field hidden from sight, from the tab order and
+      from assistive tech. A human cannot fill it; naive bots fill
+      every input they find. Named so password managers will not
+      autofill it, since a manager filling it would look like a bot.
+
+   2. Time to complete — nobody fills eight fields in under a couple
+      of seconds.
+
+   A flagged submission is NOT discarded. It is written to a separate
+   quarantine collection, so if either heuristic ever misfires on a
+   real prospect the lead is still recoverable. Losing a genuine lead
+   would be worse than accepting some spam.
+
+   The response is identical to a success, so a bot gets no signal to
+   adapt against.
+═══════════════════════════════════════════════════════════════ */
+const HONEYPOT_FIELD = 'subject_ref';
+const MIN_FILL_MS = 2500;
+
+function detectAutomation(body) {
+  const trap = body[HONEYPOT_FIELD];
+  if (typeof trap === 'string' && trap.trim() !== '') {
+    return 'honeypot field was filled';
+  }
+
+  const elapsed = Number(body.elapsed_ms);
+  if (Number.isFinite(elapsed) && elapsed >= 0 && elapsed < MIN_FILL_MS) {
+    return 'form completed in ' + elapsed + 'ms (minimum ' + MIN_FILL_MS + 'ms)';
+  }
+
+  return null;
+}
+
+/* Daily volume watch — an early warning that abuse is underway,
+   before a Firestore write quota is exhausted and genuine
+   submissions start being refused. */
+const volume = { day: null, accepted: 0, quarantined: 0 };
+
+function recordVolume(kind) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (volume.day !== today) {
+    volume.day = today;
+    volume.accepted = 0;
+    volume.quarantined = 0;
+  }
+  volume[kind] += 1;
+
+  const total = volume.accepted + volume.quarantined;
+  if (total === 100 || total === 500 || total === 2000) {
+    console.warn('[VOLUME] ' + total + ' submissions today (' +
+                 volume.accepted + ' accepted, ' + volume.quarantined +
+                 ' quarantined). Investigate if this is unexpected.');
+  }
+  return volume;
+}
+
 function validateLead(body) {
   const clean = {};
 
@@ -243,7 +329,32 @@ app.get('/api/health', async (req, res) => {
 
 // Contact / Demo Request Form Submission Endpoint
 app.post('/api/contact', contactLimiter, async (req, res) => {
-  const { error, value } = validateLead(req.body || {});
+  const body = req.body || {};
+
+  const SUCCESS_BODY = {
+    success: true,
+    message: 'Thank you! Your inquiry has been received. Our enterprise team will be in touch shortly.'
+  };
+
+  // Bot signals are evaluated before validation, so an automated
+  // submission never reaches the real pipeline or the inbox.
+  const automated = detectAutomation(body);
+  if (automated) {
+    recordVolume('quarantined');
+    console.warn('[BOT] Quarantined submission from ' + req.ip + ': ' + automated);
+    try {
+      await db.quarantineSubmission(body, automated, req.ip, req.get('user-agent'));
+    } catch (qErr) {
+      // Log the payload so a misfire on a real prospect is still
+      // recoverable from the logs.
+      console.error('[BOT] Quarantine write failed (' + qErr.message + '). Payload: ' +
+                    JSON.stringify(body).slice(0, 1000));
+    }
+    // Indistinguishable from success, so bots get nothing to tune against.
+    return res.status(201).json(SUCCESS_BODY);
+  }
+
+  const { error, value } = validateLead(body);
   if (error) {
     return res.status(400).json({ success: false, error });
   }
@@ -278,6 +389,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
     }
 
     const newLead = await db.addLead(value);
+    recordVolume('accepted');
 
     console.log('[LEAD RECEIVED] ' + newLead.id + ' - ' + value.firstname + ' ' + value.lastname +
                 ' (' + value.company + ', ' + value.country + ') - ' + value.email);
@@ -314,6 +426,19 @@ app.get('/api/leads', adminLimiter, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('[API ERROR] /api/leads:', error);
     return res.status(500).json({ success: false, error: 'Failed to retrieve leads.' });
+  }
+});
+
+// Submissions held by a bot heuristic. Review periodically so a
+// misfire on a real prospect is caught rather than buried.
+app.get('/api/leads/quarantined', adminLimiter, requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+    const items = await db.getQuarantined(limit);
+    return res.json({ success: true, count: items.length, limit, items });
+  } catch (error) {
+    console.error('[API ERROR] /api/leads/quarantined:', error);
+    return res.status(500).json({ success: false, error: 'Failed to retrieve quarantined submissions.' });
   }
 });
 
