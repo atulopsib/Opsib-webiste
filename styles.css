@@ -604,6 +604,20 @@ body {
   margin: 0;
 }
 
+/* Registered office. <address> is the correct element for a postal
+   address; browsers italicise it by default, which is reset here.
+   Sits one step below the tagline so the brand block reads
+   logo -> positioning -> location. */
+.footer-address {
+  font-style: normal;
+  font-size: var(--t-body-sm);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  color: var(--text-on-inverse-body);
+  margin: 0;
+}
+
 .footer-col {
   display: flex;
   flex-direction: column;
@@ -1594,6 +1608,9 @@ body {
     padding-right: 0;
     flex-direction: row;
     flex-wrap: wrap;
+    /* Top-align: the address block is taller than the logo and
+       tagline, and stretch would misalign all three. */
+    align-items: flex-start;
     gap: var(--space-8);
   }
 }
