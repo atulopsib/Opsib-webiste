@@ -1,45 +1,130 @@
-name: Deploy to Google Cloud Storage
+name: Deploy to Google Cloud Run
+
+# ══════════════════════════════════════════════════════════════
+#  Trigger: every push to the main branch.
+#  Pipeline steps:
+#    1. Build Docker image of the Node.js app
+#    2. Push image to Google Artifact Registry (asia-south1)
+#    3. Deploy new image to Cloud Run (asia-south1 / Mumbai)
+#    4. Run a health check on the live URL
+# ══════════════════════════════════════════════════════════════
 
 on:
   push:
     branches:
-      - main
+      - main          # change to "master" if that is your default branch
+
+env:
+  GCP_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION:        asia-south1           # Mumbai — lowest latency for India
+  CLOUD_RUN_SERVICE: opsib-web             # Cloud Run service name
+  ARTIFACT_REPO:     opsib-repo            # Artifact Registry repository name
+  IMAGE_NAME:        opsib-web             # Docker image name
 
 jobs:
   deploy:
-    name: Deploy to GCP
+    name: Build and Deploy
     runs-on: ubuntu-latest
 
     permissions:
-      contents: 'read'
-      id-token: 'write' # Required for Workload Identity Federation
+      contents: read
+      id-token: write
 
     steps:
-      - name: Checkout Code
+      # ─────────────────────────────────────────────────────────
+      #  1. Checkout source code
+      # ─────────────────────────────────────────────────────────
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Google Cloud Authentication
-      # Note: You need to set GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT in your GitHub repository secrets.
-      # Alternatively, you can use GCP_CREDENTIALS for a Service Account JSON key.
-      - id: 'auth'
-        name: 'Authenticate to Google Cloud'
-        uses: 'google-github-actions/auth@v2'
+      # ─────────────────────────────────────────────────────────
+      #  2. Authenticate to Google Cloud
+      #     GitHub Secret: GCP_SA_KEY  (full Service Account JSON)
+      #     GitHub Secret: GCP_PROJECT_ID  (e.g. "opsib-prod-123456")
+      # ─────────────────────────────────────────────────────────
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          # Prefer Workload Identity Federation
-          # workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
-          # service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
-          
-          # Use this if you are passing a JSON Service Account key instead
-          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # Upload files to the Cloud Storage Bucket
-      # Ensure you set the GCP_BUCKET_NAME secret in your GitHub repository.
-      - id: 'upload-folder'
-        name: 'Upload to Cloud Storage'
-        uses: 'google-github-actions/upload-cloud-storage@v2'
-        with:
-          path: './'
-          # Ignore .git and .github directories
-          glob: '!**/.git/**, !**/.github/**'
-          destination: '${{ secrets.GCP_BUCKET_NAME }}'
-          parent: false
+      # ─────────────────────────────────────────────────────────
+      #  3. Configure Docker to push to Artifact Registry
+      # ─────────────────────────────────────────────────────────
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # ─────────────────────────────────────────────────────────
+      #  4. Build Docker image
+      #     Tagged with the Git commit SHA for traceability
+      #     and also as :latest for Cloud Run's convenience.
+      # ─────────────────────────────────────────────────────────
+      - name: Build Docker image
+        run: |
+          BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.IMAGE_NAME }}"
+          echo "IMAGE_TAG=${BASE}:${{ github.sha }}" >> $GITHUB_ENV
+          echo "IMAGE_LATEST=${BASE}:latest"         >> $GITHUB_ENV
+          docker build \
+            --tag "${BASE}:${{ github.sha }}" \
+            --tag "${BASE}:latest" \
+            .
+
+      # ─────────────────────────────────────────────────────────
+      #  5. Push image to Artifact Registry
+      # ─────────────────────────────────────────────────────────
+      - name: Push image to Artifact Registry
+        run: |
+          docker push "${{ env.IMAGE_TAG }}"
+          docker push "${{ env.IMAGE_LATEST }}"
+
+      # ─────────────────────────────────────────────────────────
+      #  6. Deploy to Cloud Run
+      #     --allow-unauthenticated: public web traffic
+      #     --min-instances=0: scales to zero when idle (saves cost)
+      #     --max-instances=10: burst protection
+      #     Env vars are managed in Cloud Run console, not here.
+      # ─────────────────────────────────────────────────────────
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+            --image="${{ env.IMAGE_TAG }}" \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --port=8080 \
+            --allow-unauthenticated \
+            --min-instances=0 \
+            --max-instances=10 \
+            --memory=512Mi \
+            --cpu=1 \
+            --concurrency=80 \
+            --timeout=60 \
+            --quiet
+
+      # ─────────────────────────────────────────────────────────
+      #  7. Print the live Cloud Run URL
+      # ─────────────────────────────────────────────────────────
+      - name: Get Cloud Run service URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.CLOUD_RUN_SERVICE }} \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          echo "SERVICE_URL=$URL" >> $GITHUB_ENV
+          echo "✅ Deployed to: $URL"
+
+      # ─────────────────────────────────────────────────────────
+      #  8. Health check — confirms the server started successfully
+      #     /api/health returns 200 (healthy) or 503 (degraded but up)
+      # ─────────────────────────────────────────────────────────
+      - name: Health check
+        run: |
+          sleep 8
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ env.SERVICE_URL }}/api/health")
+          echo "Health check HTTP status: $STATUS"
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "503" ]; then
+            echo "✅ Server is responding correctly."
+          else
+            echo "❌ Unexpected status $STATUS — check Cloud Run logs."
+            exit 1
+          fi

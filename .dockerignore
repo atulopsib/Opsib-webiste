@@ -1,0 +1,27 @@
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+
+# ── Environment / Secrets ─────────────────────────────────────
+# NEVER include .env in the image — secrets go into Cloud Run env vars.
+.env
+.env.*
+!.env.example
+
+# ── Version control ───────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ── Dev/local files ───────────────────────────────────────────
+.agents/
+DESIGN_APPROACH.md
+DESIGN_AUDIT.md
+
+# ── Data backups (should not be in the image) ─────────────────
+*.json.bak
+leads-backup-*.json
+
+# ── OS artifacts ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
